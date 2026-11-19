@@ -9,7 +9,7 @@
     <div class="container site-nav__inner">
       <a href="#top" class="site-nav__brand" @click="closeMenu()">
         <img src="/assets/logo.png" :alt="copy.site.nav.logoAlt" class="site-nav__logo" />
-        <span>AiCode</span>
+        <span>AiCode New</span>
       </a>
 
       <nav id="site-navigation" class="site-nav__links" :class="{ 'is-open': menuOpen }" :aria-label="copy.site.nav.label">

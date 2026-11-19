@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/jieapi/AiCode/plugins/schema/plugin.schema.json",
-  "title": "AiCode 插件清单 plugin.json",
+  "title": "AiCode New 插件清单 plugin.json",
   "description": "字段与宿主 PluginManifestParser 一致。解析器同样拒绝未知字段，所以每一层都是 additionalProperties: false——写错字段名在编辑器里就会红线，不用装上去试。改清单字段时必须同步改本文件与 PluginManifestParser。",
   "type": "object",
   "additionalProperties": false,

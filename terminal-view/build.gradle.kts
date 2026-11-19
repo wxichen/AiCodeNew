@@ -4,7 +4,9 @@ plugins {
 
 android {
     namespace = "com.termux.view"
-    compileSdk = 36
+    // 纯 Java 模块：关闭 AGP 9 内置 Kotlin。
+    enableKotlin = false
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

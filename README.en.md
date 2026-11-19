@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/icon.webp" width="112" alt="AiCode" />
-  <h1 align="center">AiCode</h1>
+  <img src="docs/icon.webp" width="112" alt="AiCode New" />
+  <h1 align="center">AiCode New</h1>
   <p align="center">
     Universal AI Coding Agent for Android · Linux dev environment · Local & remote SSH
     <br />
@@ -20,23 +20,23 @@
 
 ## Statement on Open-Source License Compliance
 
-We recently discovered that a closed-source commercial app makes extensive use of AiCode's code and static assets, even retaining class names and other identifiers from this project, without complying with its open-source license. Meanwhile, its developer claims never to have heard of AiCode.
+We recently discovered that a closed-source commercial app makes extensive use of AiCode New's code and static assets, even retaining class names and other identifiers from this project, without complying with its open-source license. Meanwhile, its developer claims never to have heard of AiCode New.
 
-**AiCode permits commercial use under the terms of [GPL-3.0](LICENSE).** Our objection is not to commercialization, but to distributing derivative works as closed-source software without fulfilling obligations such as preserving copyright and license notices, licensing those works under GPL-3.0, and providing the corresponding source code. Open source does not mean giving up copyright. Please respect the license and the work of open-source developers.
+**AiCode New permits commercial use under the terms of [GPL-3.0](LICENSE).** Our objection is not to commercialization, but to distributing derivative works as closed-source software without fulfilling obligations such as preserving copyright and license notices, licensing those works under GPL-3.0, and providing the corresponding source code. Open source does not mean giving up copyright. Please respect the license and the work of open-source developers.
 
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="docs/screenshots/home.png" alt="AiCode home - AI chat interface with code generation and Markdown rendering" width="270"/></td>
-      <td align="center"><img src="docs/screenshots/git.png" alt="AiCode Git integration - visual commit history and branch management" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/home.png" alt="AiCode New home - AI chat interface with code generation and Markdown rendering" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/git.png" alt="AiCode New Git integration - visual commit history and branch management" width="270"/></td>
     </tr>
     <tr>
       <td align="center">Home · AI Chat</td>
       <td align="center">Git · Commit History</td>
     </tr>
     <tr>
-      <td align="center"><img src="docs/screenshots/container.png" alt="AiCode container settings - container image management" width="270"/></td>
-      <td align="center"><img src="docs/screenshots/models.png" alt="AiCode model list - multi-provider model management" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/container.png" alt="AiCode New container settings - container image management" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/models.png" alt="AiCode New model list - multi-provider model management" width="270"/></td>
     </tr>
     <tr>
       <td align="center">Container · Image Manager</td>
@@ -49,9 +49,9 @@ We recently discovered that a closed-source commercial app makes extensive use o
 
 ## Overview
 
-AiCode is a universal AI coding agent that runs on Android, packing a full Linux development environment into your phone: it bundles an Alpine Linux container and terminal, and the AI agent can read and write files, run shell commands and run build tools, so writing, debugging and building all happen on-device. A remote SSH server can also serve as the execution backend, turning your phone into a mobile workstation for remote projects.
+AiCode New is a universal AI coding agent that runs on Android, packing a full Linux development environment into your phone: it bundles an Alpine Linux container and terminal, and the AI agent can read and write files, run shell commands and run build tools, so writing, debugging and building all happen on-device. A remote SSH server can also serve as the execution backend, turning your phone into a mobile workstation for remote projects.
 
-There is nothing to set up beforehand: install the app, configure a model under AI Vendors, and you can start coding — no computer, no environment to build yourself. AiCode ships no models and locks you into no vendor: it supports the OpenAI / Anthropic / Gemini protocols plus custom providers, with models, keys and endpoints all configured by you.
+There is nothing to set up beforehand: install the app, configure a model under AI Vendors, and you can start coding — no computer, no environment to build yourself. AiCode New ships no models and locks you into no vendor: it supports the OpenAI / Anthropic / Gemini protocols plus custom providers, with models, keys and endpoints all configured by you.
 
 ## Sponsors
 
@@ -113,7 +113,7 @@ There is nothing to set up beforehand: install the app, configure a model under 
 
 ## Star
 
-If AiCode is helpful to you, give it a [Star](https://github.com/jieapi/aicode) — it helps more developers discover the project.
+If AiCode New is helpful to you, give it a [Star](https://github.com/jieapi/aicode) — it helps more developers discover the project.
 
 ## Star History
 
@@ -127,7 +127,7 @@ If AiCode is helpful to you, give it a [Star](https://github.com/jieapi/aicode) 
 
 ## Feedback & Contribution
 
-- **QQ group**: join the [AiCode QQ group](https://qm.qq.com/q/ByvqODJdIs) (group number: 1107110698) to share tips and feedback
+- **QQ group**: join the [AiCode New QQ group](https://qm.qq.com/q/ByvqODJdIs) (group number: 1107110698) to share tips and feedback
 - **Bug reports**: open an [Issue](https://github.com/jieapi/aicode/issues) with reproduction steps, device model and OS version
 - **Feature requests**: discuss your ideas in [Issues](https://github.com/jieapi/aicode/issues)
 - **Contributing**: submit a [Pull Request](https://github.com/jieapi/aicode/pulls)
@@ -140,7 +140,7 @@ If AiCode is helpful to you, give it a [Star](https://github.com/jieapi/aicode) 
 
 ## Disclaimer
 
-AiCode is provided "as is", for learning, research and lawful software development only. Using it for any illegal or infringing purpose is strictly prohibited, including but not limited to unauthorized access to, cracking or reverse engineering of others' software or systems, circumventing technological protection measures, stealing or leaking others' data, or distributing malicious code.
+AiCode New is provided "as is", for learning, research and lawful software development only. Using it for any illegal or infringing purpose is strictly prohibited, including but not limited to unauthorized access to, cracking or reverse engineering of others' software or systems, circumventing technological protection measures, stealing or leaking others' data, or distributing malicious code.
 
 You bear all risks and responsibility for your use of this software. The authors and contributors shall not be liable for any loss arising from your use of, or inability to use, this software, nor for any act you perform using it or its consequences.
 

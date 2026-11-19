@@ -1,10 +1,10 @@
 export default {
   meta: {
-    title: "AiCode 官方网站 — Android 上的开源 AI Coding Agent",
-    description: "AiCode 官方网站。运行在 Android 上的通用开源 AI Coding Agent，内置完整 Alpine Linux 容器与多标签终端，支持本地开发与远程 SSH、可视化 Git、MCP 协议与多供应商模型。"
+    title: "AiCode New 官方网站 — Android 上的开源 AI Coding Agent",
+    description: "AiCode New 官方网站。运行在 Android 上的通用开源 AI Coding Agent，内置完整 Alpine Linux 容器与多标签终端，支持本地开发与远程 SSH、可视化 Git、MCP 协议与多供应商模型。"
   },
   nav: {
-    logoAlt: "AiCode 标志",
+    logoAlt: "AiCode New 标志",
     label: "主导航",
     links: {
       preview: "界面预览",
@@ -98,19 +98,19 @@ export default {
       qiniu: {
         name: "七牛云 AI",
         tag: "邀请推广",
-        desc: "新用户注册赠 300 万 Token（2 年有效），支持 50+ 热门大模型，可直接接入 AiCode 使用。",
+        desc: "新用户注册赠 300 万 Token（2 年有效），支持 50+ 热门大模型，可直接接入 AiCode New 使用。",
         linkText: "了解详情"
       }
     }
   },
   cta: {
     title: "在手机上开启你的下一个项目",
-    subtitle: "如果 AiCode 对你有帮助，欢迎到 GitHub 点亮 Star。",
+    subtitle: "如果 AiCode New 对你有帮助，欢迎到 GitHub 点亮 Star。",
     download: "下载最新版本",
     github: "GitHub Star"
   },
   footer: {
-    backToTop: "AiCode，返回顶部",
+    backToTop: "AiCode New，返回顶部",
     description: "Android 上的通用 AI Coding Agent，提供 Linux 开发环境，支持本地与远程 SSH。",
     navigation: "页脚导航",
     columns: {
@@ -139,7 +139,7 @@ export default {
         }
       }
     },
-    copyright: "© 2026 AiCode · GPL-3.0 开源许可",
+    copyright: "© 2026 AiCode New · GPL-3.0 开源许可",
     usage: "仅供学习、研究与合法的软件开发用途"
   }
 };

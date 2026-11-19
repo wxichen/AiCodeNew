@@ -1,9 +1,9 @@
 {
   "name": "aicode-plugin-build",
   "private": true,
-  "description": "AiCode 插件源码构建工具链",
+  "description": "AiCode New 插件源码构建工具链",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "build:plugins": "node build.mjs",
@@ -15,11 +15,11 @@
     "check:manifests": "node ../scripts/check-plugin-manifests.mjs"
   },
   "devDependencies": {
-    "@types/node": "^18.19.130",
-    "@vitejs/plugin-vue": "^5.2.4",
+    "@types/node": "^26.0.0",
+    "@vitejs/plugin-vue": "^6.0.11",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
-    "vite": "^5.4.21",
+    "vite": "^8.3.8",
     "vue": "3.5.45"
   }
 }

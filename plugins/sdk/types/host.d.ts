@@ -1,5 +1,5 @@
 /**
- * AiCode 插件**进程侧**宿主桥类型声明。
+ * AiCode New 插件**进程侧**宿主桥类型声明。
  *
  * 对应宿主 `PluginRuntimeManager.hostRequest` 的分发表：插件常驻进程（JavaScript / Python）
  * 通过 `hostCall(method, params)` 调用宿主，`method` 即本文件 {@link HostMethodMap} 的键。

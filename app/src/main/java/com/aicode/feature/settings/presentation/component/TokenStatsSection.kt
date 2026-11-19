@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,18 +62,17 @@ import com.aicode.feature.agent.presentation.component.formatTokenCount
 import com.aicode.feature.settings.presentation.TokenStatsPeriod
 import com.aicode.feature.settings.presentation.TokenStatsUiState
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
-import com.patrykandpatrick.vico.core.common.Fill
 import compose.icons.FeatherIcons
 import compose.icons.feathericons.Check
 import compose.icons.feathericons.ChevronDown
@@ -555,8 +553,10 @@ private fun SummaryCard(label: String, value: String, sub: String? = null, modif
 private fun TokenTrendChart(trend: List<DayCallStats>, isHourly: Boolean) {
     val modelProducer = remember { CartesianChartModelProducer() }
     val axisLabel = rememberTextComponent(
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textSize = 10.sp
+        style = MaterialTheme.typography.labelSmall.copy(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 10.sp
+        )
     )
     // y 轴：token 数用 k/M 单位展示，避免大数字拥挤
     val yAxisFormatter = remember {
@@ -614,10 +614,11 @@ private fun TokenTrendChart(trend: List<DayCallStats>, isHourly: Boolean) {
 }
 
 /** 趋势线：实色线 + 半透明面积填充，多条线重叠时仍可辨识。 */
-private fun trendLine(color: Color): LineCartesianLayer.Line = LineCartesianLayer.Line(
-    fill = LineCartesianLayer.LineFill.single(Fill(color.toArgb())),
-    stroke = LineCartesianLayer.LineStroke.Continuous(thicknessDp = 2f),
-    areaFill = LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.18f).toArgb()))
+@Composable
+private fun trendLine(color: Color): LineCartesianLayer.Line = LineCartesianLayer.rememberLine(
+    fill = LineCartesianLayer.LineFill.single(Fill(color)),
+    stroke = LineCartesianLayer.LineStroke.Continuous(thickness = 2.dp),
+    areaFill = LineCartesianLayer.AreaFill.single(Fill(color.copy(alpha = 0.18f)))
 )
 
 private fun tzOffsetNow(): Long =

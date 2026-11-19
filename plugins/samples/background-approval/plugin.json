@@ -10,8 +10,8 @@
   "publisher": "demo",
   "repository": "https://github.com/jieapi/AiCode",
   "description": {
-    "default": "Shows a floating ball while AiCode is in the background and expands it into an approval panel when the AI needs permission. Foreground requests are passed straight back to the in-app dialog.",
-    "zh-CN": "AiCode 在后台时显示悬浮球；AI 需要授权时展开审批面板。App 在前台时直接交回应用内确认框，不阻塞审批。"
+    "default": "Shows a floating ball while AiCode New is in the background and expands it into an approval panel when the AI needs permission. Foreground requests are passed straight back to the in-app dialog.",
+    "zh-CN": "AiCode New 在后台时显示悬浮球；AI 需要授权时展开审批面板。App 在前台时直接交回应用内确认框，不阻塞审批。"
   },
   "license": "MIT",
   "engines": {

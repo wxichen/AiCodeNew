@@ -10,8 +10,8 @@
   "publisher": "demo",
   "repository": "https://github.com/example/provider-demo",
   "description": {
-    "zh-CN": "启动一个本机 OpenAI 兼容服务，把对话回显给 AiCode；用于验证插件提供商注册与请求链路。",
-    "en": "Starts a local OpenAI-compatible echo service so AiCode can verify plugin provider registration and requests."
+    "zh-CN": "启动一个本机 OpenAI 兼容服务，把对话回显给 AiCode New；用于验证插件提供商注册与请求链路。",
+    "en": "Starts a local OpenAI-compatible echo service so AiCode New can verify plugin provider registration and requests."
   },
   "license": "MIT",
   "engines": {

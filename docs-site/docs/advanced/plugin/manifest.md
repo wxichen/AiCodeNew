@@ -217,7 +217,7 @@
 | `format` | 是 | 目前仅支持 `openai` |
 | `baseUrl` | 是 | `http`/`https` 绝对地址，不能包含账号、查询参数或片段，最长 2048 字符 |
 
-宿主按此声明注册提供商；服务启动、模型与凭据维护见[插件提供商](/advanced/plugin/shizuku-providers#插件提供商)。插件 provider 的请求会自动携带 `X-AiCode-Session-Id` 请求头，值为当前 App 会话 ID，插件网关可用它把请求路由到对应会话。
+宿主按此声明注册提供商；服务启动、模型与凭据维护见[插件提供商](/advanced/plugin/shizuku-providers#插件提供商)。插件 provider 的请求会自动携带 `X-AiCode New-Session-Id` 请求头，值为当前 App 会话 ID，插件网关可用它把请求路由到对应会话。
 
 ### sessionSources
 
@@ -270,9 +270,9 @@ handler 命名规则与工具 handler 相同，最长 64 字符。声明了 `ses
 
 远程网关应遵守以下约定：
 
-- `X-AiCode-Session-Id` 为外部会话完整 ID。
-- `X-AiCode-Operation-Id` 是请求幂等键，重试不得再次执行同一任务。
-- `X-AiCode-Subscribe-Only: true` 表示仅订阅已有执行，不能创建会话或发送新任务。
+- `X-AiCode New-Session-Id` 为外部会话完整 ID。
+- `X-AiCode New-Operation-Id` 是请求幂等键，重试不得再次执行同一任务。
+- `X-AiCode New-Subscribe-Only: true` 表示仅订阅已有执行，不能创建会话或发送新任务。
 - 正文和思考实时转成 `delta.content` / `delta.reasoning_content`。单个助手消息结束时可发送 `delta.aicode_message_id`，其值与历史消息 ID 一致；只在整轮结束时发送 `[DONE]`。
 - 断开订阅不等于中断远端任务；显式停止走 `interruptSession`。
 

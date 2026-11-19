@@ -6,8 +6,8 @@
     <div class="container">
       <div class="hero__intro reveal" v-reveal>
         <div class="hero__title-row">
-          <img src="/assets/logo.png" alt="AiCode" class="hero__app-logo" />
-          <h1 class="hero__title">AiCode</h1>
+          <img src="/assets/logo.png" alt="AiCode New" class="hero__app-logo" />
+          <h1 class="hero__title">AiCode New</h1>
         </div>
 
         <p class="hero__subtitle">

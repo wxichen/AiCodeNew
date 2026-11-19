@@ -40,7 +40,7 @@ import { onMounted, ref } from 'vue';
 import type { AicodePageContext } from '@jieapi/plugin-sdk/page';
 
 const ctx = ref<AicodePageContext | null>(null);
-const greeting = ref('你好，AiCode');
+const greeting = ref('你好，AiCode New');
 const saving = ref(false);
 const calling = ref(false);
 const output = ref('');

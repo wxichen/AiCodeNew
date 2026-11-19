@@ -38,7 +38,7 @@
         </aicode-group>
         <p class="hint">App 启动时会自动连接启用项；连接由常驻插件进程维护。</p>
         <div class="warning">
-          密码和私钥路径明文保存在插件数据目录 <code>data://servers.json</code>，不会进入 AiCode 备份。建议使用受限账号，私钥放在插件数据目录。
+          密码和私钥路径明文保存在插件数据目录 <code>data://servers.json</code>，不会进入 AiCode New 备份。建议使用受限账号，私钥放在插件数据目录。
         </div>
       </section>
 

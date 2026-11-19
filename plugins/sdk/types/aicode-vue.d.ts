@@ -1,5 +1,5 @@
 /**
- * AiCode 插件页面组件库（`/__aicode/aicode-ui-vue.js`）的模板类型声明。
+ * AiCode New 插件页面组件库（`/__aicode/aicode-ui-vue.js`）的模板类型声明。
  *
  * 组件库在运行时挂到全局 `window.AicodeUI`，页面通过 `app.use(AicodeUI)` 注册。
  * 本文件由 `@jieapi/plugin-sdk/page/vue` 导出，把同名组件并入 Vue 的 `GlobalComponents`，

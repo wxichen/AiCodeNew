@@ -2,11 +2,10 @@ import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
+    // Kotlin 编译由 AGP 9 内置提供，不再应用 org.jetbrains.kotlin.android。
     id("com.android.application")
-    kotlin("android")
-
-    kotlin("plugin.compose")
-    kotlin("plugin.serialization") version "2.2.21"
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
 }
@@ -87,8 +86,8 @@ val syncAiDocs = tasks.register<Sync>("syncAiDocs") {
 
 android {
     namespace = "com.aicode"
-    compileSdk = 36
-    buildToolsVersion = "35.0.0"
+    compileSdk = 37
+    buildToolsVersion = "36.0.0"
 
     signingConfigs {
         create("release") {
@@ -156,15 +155,16 @@ android {
     // 客户机二进制不由内核 execve，而是 proot 的 loader 用 mmap(PROT_EXEC) 映射进内存，
     // 不受 W^X 约束。故命名必须是 lib*.so（libproot-loader32.so 实为 32 位 ELF，同样有效）。
     sourceSets {
-        getByName("universal") { assets.srcDir("src/_armAssets") }
-        getByName("universal") { assets.srcDir("src/_x86Assets") }
-        getByName("armsolo") { assets.srcDir("src/_armAssets") }
-        getByName("x86solo") { assets.srcDir("src/_x86Assets") }
-        getByName("universal") { jniLibs.srcDirs("src/_armJniLibs", "src/_x86JniLibs") }
-        getByName("armsolo") { jniLibs.srcDir("src/_armJniLibs") }
-        getByName("x86solo") { jniLibs.srcDir("src/_x86JniLibs") }
-        // 文档不放在 app/src/main/assets 下，改由 syncAiDocs 从 docs-site/docs 生成后并入
-        getByName("main") { assets.srcDir(aiDocsGeneratedDir) }
+        getByName("universal") { assets.directories.add("src/_armAssets") }
+        getByName("universal") { assets.directories.add("src/_x86Assets") }
+        getByName("armsolo") { assets.directories.add("src/_armAssets") }
+        getByName("x86solo") { assets.directories.add("src/_x86Assets") }
+        getByName("universal") { jniLibs.directories.addAll(listOf("src/_armJniLibs", "src/_x86JniLibs")) }
+        getByName("armsolo") { jniLibs.directories.add("src/_armJniLibs") }
+        getByName("x86solo") { jniLibs.directories.add("src/_x86JniLibs") }
+        // 文档不放在 app/src/main/assets 下，改由 syncAiDocs 从 docs-site/docs 生成后并入；
+        // AGP 9 的 SourceSet API 不再接受 Provider，这里用配置期解析出的绝对路径。
+        getByName("main") { assets.directories.add(layout.buildDirectory.get().asFile.resolve("generated/aiDocs").path) }
     }
 
     buildTypes {
@@ -207,10 +207,6 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         // UserService 走 AIDL 跨进程接口（app/src/main/aidl），显式开启以免依赖 AGP 默认值。
@@ -239,9 +235,11 @@ android {
             excludes += "META-INF/DEPENDENCIES"
             excludes += "META-INF/LICENSE"
             excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/LICENSE.md"
             excludes += "META-INF/license.txt"
             excludes += "META-INF/NOTICE"
             excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/NOTICE.md"
             excludes += "META-INF/notice.txt"
             excludes += "META-INF/INDEX.LIST"
             excludes += "/sshj.properties"
@@ -288,7 +286,7 @@ gradle.projectsEvaluated {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.01.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
@@ -297,62 +295,66 @@ dependencies {
     implementation("androidx.compose.animation:animation")
 
     // Vico 图表（Token 统计趋势图）
-    implementation("com.patrykandpatrick.vico:compose-m3:2.4.4")
+    implementation("com.patrykandpatrick.vico:compose-m3:3.3.1")
 
     // Lifecycle + ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
-    implementation("androidx.lifecycle:lifecycle-process:2.9.0")
-    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
 
     // Hilt 依赖注入
-    implementation("com.google.dagger:hilt-android:2.56.1")
-    ksp("com.google.dagger:hilt-compiler:2.56.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.google.dagger:hilt-android:2.60.1")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
+    implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
 
     // Room 数据库
-    implementation("androidx.room:room-runtime:2.7.1")
-    implementation("androidx.room:room-ktx:2.7.1")
-    ksp("androidx.room:room-compiler:2.7.1")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.1.4")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
 
     // 网络请求
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
 
     // HTML 解析与清洗 (用于 WebFetchTool)
-    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("org.jsoup:jsoup:1.24.1")
 
     // 协程
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     // Kotlin 序列化
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
 
     // YAML 解析 (用于 Skill Frontmatter)
-    implementation("org.yaml:snakeyaml:2.2")
+    implementation("org.yaml:snakeyaml:2.7")
 
     // 远程同步 (SFTP/FTP) 与内置 FTP 服务端
-    implementation("com.hierynomus:sshj:0.38.0")
-    // BouncyCastle：sshj 0.38.0 用 X25519 密钥交换，Android 自带裁剪版 BC 不含该算法，
+    implementation("com.hierynomus:sshj:0.41.2")
+    // BouncyCastle：sshj 用 X25519 密钥交换，Android 自带裁剪版 BC 不含该算法，
     // 需显式引入完整版并注册替换（见 AIEditorApp.registerBouncyCastle）。
-    // 1.75 命中 CVE-2024-30172（Ed25519 验证死循环 DoS），1.78 起修复；取与 sshj 0.39.0 对齐的 1.78.1。
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
-    implementation("commons-net:commons-net:3.10.0")
-    implementation("org.apache.ftpserver:ftpserver-core:1.2.0")
-    implementation("org.slf4j:slf4j-simple:2.0.9")
+    // 1.75 命中 CVE-2024-30172（Ed25519 验证死循环 DoS），1.78 起修复。
+    // sshj 0.41.2 传递引入 bcpkix/bcutil 1.84，三者版本必须一致：bcprov 单独升级会与
+    // 旧版 bcutil 在 IANAObjectIdentifiers 等类上重复打包，故整体对齐到 1.87。
+    implementation("org.bouncycastle:bcprov-jdk18on:1.87")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.87")
+    implementation("org.bouncycastle:bcutil-jdk18on:1.87")
+    implementation("commons-net:commons-net:3.13.0")
+    implementation("org.apache.ftpserver:ftpserver-core:1.2.1")
+    implementation("org.slf4j:slf4j-simple:2.0.20")
 
     // 容器：解压 Alpine rootfs tar.gz（正确处理 symlink/hardlink/权限位）
-    implementation("org.apache.commons:commons-compress:1.26.2")
+    implementation("org.apache.commons:commons-compress:1.28.0")
     // xz 解压支持：commons-compress 的 XZCompressorInputStream 依赖此库（解压用户导入的 .tar.xz 镜像）
-    implementation("org.tukaani:xz:1.10")
+    implementation("org.tukaani:xz:1.12")
 
     // Termux 开源终端组件：terminal-emulator 负责 VT100/ANSI 解析与 PTY（自带 native .so），
     // terminal-view 是渲染用的 Android View。经 JitPack 分发（com.github.<user>.<repo> 坐标形式），
@@ -371,27 +373,27 @@ dependencies {
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     // Markdown Renderer
-    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.41.0")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.46.0")
     // Markdown Renderer — Code Syntax Highlighting
-    implementation("com.mikepenz:multiplatform-markdown-renderer-code:0.41.0")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-code:0.46.0")
     // 语法高亮引擎（markdown-renderer-code 传递引入，显式声明以供 diff 视图直接使用）
-    implementation("dev.snipme:highlights-jvm:1.1.0")
+    implementation("dev.snipme:highlights-jvm:1.2.0")
     // LaTeX 数学公式渲染（纯 JVM，无 .so；jlatexmath-android 内置字体资源）
     implementation("ru.noties:jlatexmath-android:0.2.0")
 
     // 代码编辑器（独立编辑器页）。只取纯 JVM 模块：language-treesitter 与 oniguruma-native 含 .so，
     // 会与 ABI flavor 拆分和 F-Droid 可复现构建冲突，故不引入。
-    implementation(platform("io.github.rosemoe:editor-bom:0.24.6"))
+    implementation(platform("io.github.rosemoe:editor-bom:0.24.7"))
     implementation("io.github.rosemoe:editor")
     implementation("io.github.rosemoe:language-textmate")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     // WorkManager — 保活兜底：周期检查 TerminalKeepaliveService 存活并拉起（KeepaliveWorker）
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
-    implementation("androidx.hilt:hilt-work:1.2.0")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
+    implementation("androidx.hilt:hilt-work:1.4.0")
 
     // Android WebKit 扩展（提供现代深色模式 WebSettingsCompat / ForceDark 支持）
-    implementation("androidx.webkit:webkit:1.12.1")
+    implementation("androidx.webkit:webkit:1.18.0")
 
     // Shizuku：以 adb shell（uid 2000）身份执行命令。api 提供 Shizuku 类与 UserService 绑定，
     // provider 注册 ShizukuProvider（见 AndroidManifest）以跨进程获取 binder。
@@ -399,21 +401,21 @@ dependencies {
     implementation("dev.rikka.shizuku:provider:13.1.5")
 
     // Core Android（1.17.0 起提供 NotificationCompat 的实时通知推广接口 setRequestPromotedOngoing）
-    implementation("androidx.core:core:1.17.0")
+    implementation("androidx.core:core:1.19.1")
 
     // 插件运行时在容器内以子进程执行，不再依赖设备 WebView 的 JS 沙箱。
 
     // Testing
     testImplementation("junit:junit:4.13.2")
     // 迁移测试：MigrationTestHelper + Robolectric（在 JVM 上跑 Room 迁移，需真实 resources）
-    testImplementation("androidx.room:room-testing:2.7.1")
-    testImplementation("org.robolectric:robolectric:4.15.1")
-    testImplementation("androidx.test:core-ktx:1.6.1")
-    testImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation("androidx.room:room-testing:2.8.5")
+    testImplementation("org.robolectric:robolectric:4.18.1")
+    testImplementation("androidx.test:core-ktx:1.7.0")
+    testImplementation("androidx.test.ext:junit:1.3.0")
     // 协程测试：runTest 虚拟时间（替代 runBlocking）+ Dispatchers.setMain（ViewModel 测试基建）
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // MockK：Kotlin 原生 mock（coEvery/coVerify 协程支持），用于 ViewModel/Repository 依赖打桩
-    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("io.mockk:mockk:1.14.12")
 }
 
 ksp {

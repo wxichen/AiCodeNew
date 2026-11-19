@@ -4,7 +4,9 @@ plugins {
 
 android {
     namespace = "com.termux.terminal"
-    compileSdk = 36
+    // 纯 Java 模块：关闭 AGP 9 内置 Kotlin，省掉空的 Kotlin 编译任务与 stdlib 依赖。
+    enableKotlin = false
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

@@ -5,7 +5,7 @@
         <div class="footer__brand-block">
           <a href="#top" class="footer__brand" :aria-label="copy.site.footer.backToTop">
             <img src="/assets/logo.png" alt="" width="32" height="32" class="footer__logo" />
-            <span>AiCode</span>
+            <span>AiCode New</span>
           </a>
           <p class="footer__description">
             {{ copy.site.footer.description }}

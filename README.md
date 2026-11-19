@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="docs/icon.webp" width="112" alt="AiCode" />
-  <h1 align="center">AiCode</h1>
+  <img src="docs/icon.webp" width="112" alt="AiCode New" />
+  <h1 align="center">AiCode New</h1>
   <p align="center">
     Android 上的通用 AI Coding Agent · Linux 开发环境 · 支持本地与远程 SSH
     <br />
@@ -20,23 +20,23 @@
 
 ## 关于开源协议的声明
 
-近期发现，某闭源商业 App 大量使用了 AiCode 的代码及静态资源，甚至保留了本项目的类名与相关标识，却未遵守本项目的开源协议。与此同时，其开发者声称从未听说过 AiCode。
+近期发现，某闭源商业 App 大量使用了 AiCode New 的代码及静态资源，甚至保留了本项目的类名与相关标识，却未遵守本项目的开源协议。与此同时，其开发者声称从未听说过 AiCode New。
 
-**AiCode 允许在遵守 [GPL-3.0](LICENSE) 的前提下进行商业使用。** 我们反对的不是商业化，而是使用本项目代码后，以闭源形式分发衍生作品，且未履行保留版权与许可声明、按 GPL-3.0 授权及提供对应源代码等义务的行为。开源不等于放弃版权，请尊重开源协议与开发者的劳动成果。
+**AiCode New 允许在遵守 [GPL-3.0](LICENSE) 的前提下进行商业使用。** 我们反对的不是商业化，而是使用本项目代码后，以闭源形式分发衍生作品，且未履行保留版权与许可声明、按 GPL-3.0 授权及提供对应源代码等义务的行为。开源不等于放弃版权，请尊重开源协议与开发者的劳动成果。
 
 <p align="center">
   <table>
     <tr>
-      <td align="center"><img src="docs/screenshots/home.png" alt="AiCode 主页 - AI 对话界面，支持代码生成与 Markdown 渲染" width="270"/></td>
-      <td align="center"><img src="docs/screenshots/git.png" alt="AiCode Git 集成 - 可视化提交记录与分支管理" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/home.png" alt="AiCode New 主页 - AI 对话界面，支持代码生成与 Markdown 渲染" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/git.png" alt="AiCode New Git 集成 - 可视化提交记录与分支管理" width="270"/></td>
     </tr>
     <tr>
       <td align="center">主页 · AI 对话</td>
       <td align="center">Git · 提交历史</td>
     </tr>
     <tr>
-      <td align="center"><img src="docs/screenshots/container.png" alt="AiCode 容器设置 - 容器镜像管理" width="270"/></td>
-      <td align="center"><img src="docs/screenshots/models.png" alt="AiCode 模型列表 - 多供应商模型管理" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/container.png" alt="AiCode New 容器设置 - 容器镜像管理" width="270"/></td>
+      <td align="center"><img src="docs/screenshots/models.png" alt="AiCode New 模型列表 - 多供应商模型管理" width="270"/></td>
     </tr>
     <tr>
       <td align="center">容器 · 镜像管理</td>
@@ -49,9 +49,9 @@
 
 ## 简介
 
-AiCode 是运行在 Android 上的通用 AI Coding Agent，把一套完整的 Linux 开发环境装进手机：内置 Alpine Linux 容器与终端，AI Agent 能读写文件、执行 Shell 命令、运行构建工具，写代码、调试到构建都在手机本地完成；也可改用远程 SSH 服务器作为执行后端，把手机变成远程项目的移动工作站。
+AiCode New 是运行在 Android 上的通用 AI Coding Agent，把一套完整的 Linux 开发环境装进手机：内置 Alpine Linux 容器与终端，AI Agent 能读写文件、执行 Shell 命令、运行构建工具，写代码、调试到构建都在手机本地完成；也可改用远程 SSH 服务器作为执行后端，把手机变成远程项目的移动工作站。
 
-上手无需任何准备：装上 App、在「AI 供应商」配好模型即可直接开发，不用电脑，也不用自己搭建环境。AiCode 不内置模型、不绑定供应商，支持 OpenAI / Anthropic / Gemini 三类协议与自定义供应商，模型、密钥与端点都由你自行配置。
+上手无需任何准备：装上 App、在「AI 供应商」配好模型即可直接开发，不用电脑，也不用自己搭建环境。AiCode New 不内置模型、不绑定供应商，支持 OpenAI / Anthropic / Gemini 三类协议与自定义供应商，模型、密钥与端点都由你自行配置。
 
 ## 赞助商
 
@@ -113,7 +113,7 @@ AiCode 是运行在 Android 上的通用 AI Coding Agent，把一套完整的 Li
 
 ## Star
 
-如果 AiCode 对你有帮助，欢迎 [Star](https://github.com/jieapi/aicode) 支持，让更多开发者看到这个项目。
+如果 AiCode New 对你有帮助，欢迎 [Star](https://github.com/jieapi/aicode) 支持，让更多开发者看到这个项目。
 
 ## Star History
 
@@ -127,7 +127,7 @@ AiCode 是运行在 Android 上的通用 AI Coding Agent，把一套完整的 Li
 
 ## 反馈与贡献
 
-- **交流群**：加入 [AiCode QQ 交流群](https://qm.qq.com/q/ByvqODJdIs)（群号：1107110698），交流使用心得、反馈问题
+- **交流群**：加入 [AiCode New QQ 交流群](https://qm.qq.com/q/ByvqODJdIs)（群号：1107110698），交流使用心得、反馈问题
 - **Bug 反馈**：到 [Issues](https://github.com/jieapi/aicode/issues) 提交，附上复现步骤、设备型号与系统版本，便于定位
 - **功能建议**：想加新功能或改进，欢迎先在 [Issues](https://github.com/jieapi/aicode/issues) 讨论
 - **贡献代码**：欢迎提交 [Pull Request](https://github.com/jieapi/aicode/pulls)
@@ -140,7 +140,7 @@ AiCode 是运行在 Android 上的通用 AI Coding Agent，把一套完整的 Li
 
 ## 免责声明
 
-AiCode 按「现状」提供，仅供学习、研究与合法的软件开发用途。严禁将本软件用于任何违法或侵权用途，包括但不限于未经授权入侵、破解、逆向工程他人软件或系统，绕过技术保护措施，窃取或泄露他人数据，传播恶意代码等侵害他人合法权益的行为。
+AiCode New 按「现状」提供，仅供学习、研究与合法的软件开发用途。严禁将本软件用于任何违法或侵权用途，包括但不限于未经授权入侵、破解、逆向工程他人软件或系统，绕过技术保护措施，窃取或泄露他人数据，传播恶意代码等侵害他人合法权益的行为。
 
 使用者应自行承担使用本软件的全部风险与责任；对于使用者因使用或无法使用本软件而产生的任何损失，以及其利用本软件实施的任何行为及后果，作者与贡献者均不承担任何责任。
 

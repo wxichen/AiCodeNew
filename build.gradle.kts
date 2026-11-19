@@ -5,20 +5,20 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // 覆盖 AGP 8.9.3 自带的 R8 8.9.x。Kotlin 2.2 官方最低要求 R8 8.10.21，但该版本对
-        // Kotlin 2.2.21 的 stdlib metadata（叠加核心库脱糖逐类重写）仍会抛无害的
-        // "Should never be called" 并逐类刷屏（2000+ 条 WARNING，日志达 40 MB）。
-        // 升到 8.13.19（官方 Kotlin 2.3 档，AGP 8.9.3 在其兼容区间 8.2.2-8.13 内，向下兼容 2.2 class）消除刷屏。
-        // 必须放在根项目 buildscript：放 settings.gradle.kts 的 buildscript 里只影响 settings 脚本自身
-        // 的 classpath，AGP 仍用它捆绑的版本，实测无效。
-        classpath("com.android.tools:r8:8.13.19")
+        // AGP 9.5 捆绑的 R8/D8 已原生支持最新 Kotlin class 格式，不再需要覆盖 R8 版本。
+        // Kotlin Gradle Plugin 与 KSP 需显式置于 classpath：AGP 9 的内置 Kotlin
+        // 只提供运行时依赖（KGP 2.2.10 基线），升到更高 Kotlin 版本靠这里覆盖。
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
+        classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.14")
     }
 }
 
 plugins {
-    id("com.android.application") version "8.9.3" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false
-    id("com.google.dagger.hilt.android") version "2.56.1" apply false
-    id("com.google.devtools.ksp") version "2.2.21-2.0.5" apply false
+    // AGP 9 起 Kotlin 编译由 AGP 内置，不再声明 org.jetbrains.kotlin.android。
+    id("com.android.application") version "9.5.1" apply false
+    id("com.android.library") version "9.5.1" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21" apply false
+    id("com.google.dagger.hilt.android") version "2.60.1" apply false
+    id("com.google.devtools.ksp") version "2.3.14" apply false
 }

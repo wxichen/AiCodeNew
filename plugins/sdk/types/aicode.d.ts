@@ -1,5 +1,5 @@
 /**
- * AiCode 插件页面宿主桥类型声明。
+ * AiCode New 插件页面宿主桥类型声明。
  *
  * 与宿主资源 `/__aicode/aicode.js` 对应：页面加载该脚本后，`window.aicode` 即为本文件描述的
  * 桥对象。本文件只含类型，没有运行时代码；通过 `@jieapi/plugin-sdk/page` 引入后生效。

@@ -1,6 +1,6 @@
 # 在容器中编译 Android 应用
 
-在 AiCode 的 Linux 容器里配置好 JDK 与 Android SDK，即可直接从源码编译 Android 应用。本文以 Debian 12 (bookworm) aarch64 为例，Ubuntu、Arch 等发行版同样适用。
+在 AiCode New 的 Linux 容器里配置好 JDK 与 Android SDK，即可直接从源码编译 Android 应用。本文以 Debian 12 (bookworm) aarch64 为例，Ubuntu、Arch 等发行版同样适用。
 
 ::: tip 建议使用自定义 Debian / Ubuntu 镜像
 内置的 Alpine 容器使用 musl libc，在 PRoot 下编译 Android 应用需要额外处理（见文末补充）。导入自定义镜像的方法见「自定义容器镜像」。
@@ -11,22 +11,22 @@
 | 项 | 值 |
 | --- | --- |
 | 系统 | Debian GNU/Linux 12 (bookworm) aarch64 |
-| JDK | OpenJDK 17 |
+| JDK | OpenJDK 21 |
 | Gradle | 项目 wrapper 自带，无需系统安装 |
-| SDK | Android 36 / build-tools 35.0.0 |
+| SDK | Android 37 / build-tools 36.0.0 |
 | aapt2 | ARM64 静态编译版 35.0.2（社区构建） |
 
 ## 1. 安装基础依赖
 
 ```bash
 apt update
-apt install -y openjdk-17-jdk-headless curl wget unzip ripgrep
+apt install -y openjdk-21-jdk-headless curl wget unzip ripgrep
 ```
 
 验证 JDK：
 
 ```bash
-/usr/lib/jvm/java-17-openjdk-arm64/bin/java -version
+/usr/lib/jvm/java-21-openjdk-arm64/bin/java -version
 # 应输出 openjdk version "17..."
 ```
 
@@ -42,16 +42,16 @@ unzip -q clt.zip
 mkdir -p cmdline-tools/latest && mv cmdline-tools/* cmdline-tools/latest/
 
 # 组件全部走镜像安装（自动处理目录布局与许可接受）
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-arm64
 export ANDROID_HOME=$HOME/android/sdk
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 export SDK_TEST_BASE_URL=https://mirrors.cloud.tencent.com/AndroidSDK/
 
-yes | sdkmanager --install "platforms;android-36" "build-tools;35.0.0" "platform-tools"
+yes | sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
 ```
 
 ::: tip 版本说明
-按目标项目的 `compileSdk` 和 `buildToolsVersion` 选择组件版本，本文示例为 Android 36 / build-tools 35.0.0。
+按目标项目的 `compileSdk` 和 `buildToolsVersion` 选择组件版本，本文示例为 Android 37 / build-tools 36.0.0。
 :::
 
 ::: tip 镜像与官方源
@@ -68,11 +68,11 @@ curl -O https://dl.google.com/android/repository/commandlinetools-linux-13114758
 unzip -q commandlinetools-linux-*.zip
 mkdir -p cmdline-tools/latest && mv cmdline-tools/* cmdline-tools/latest/
 
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-arm64
 export ANDROID_HOME=$HOME/android/sdk
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
 
-yes | sdkmanager --install "platforms;android-36" "build-tools;35.0.0" "platform-tools"
+yes | sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
 ```
 
 ### 备选：从镜像手工组装 SDK
@@ -82,25 +82,25 @@ yes | sdkmanager --install "platforms;android-36" "build-tools;35.0.0" "platform
 | 组件 | 镜像地址 |
 | --- | --- |
 | commandlinetools | `https://mirrors.cloud.tencent.com/AndroidSDK/commandlinetools-linux-13114758_latest.zip` |
-| platform-36 | `https://mirrors.cloud.tencent.com/AndroidSDK/platform-36_r01.zip` |
-| build-tools 35.0.0 | `https://mirrors.cloud.tencent.com/AndroidSDK/build-tools_r35_linux.zip` |
+| platform-37.0 | `https://mirrors.cloud.tencent.com/AndroidSDK/platform-37.0_r02.zip` |
+| build-tools 36.0.0 | `https://mirrors.cloud.tencent.com/AndroidSDK/build-tools_r36_linux.zip` |
 | platform-tools | `https://mirrors.cloud.tencent.com/AndroidSDK/platform-tools_r35.0.2-linux.zip` |
 
 ```bash
 cd /workspace
-curl -L -O https://mirrors.cloud.tencent.com/AndroidSDK/platform-36_r01.zip
-curl -L -O https://mirrors.cloud.tencent.com/AndroidSDK/build-tools_r35_linux.zip
+curl -L -O https://mirrors.cloud.tencent.com/AndroidSDK/platform-37.0_r02.zip
+curl -L -O https://mirrors.cloud.tencent.com/AndroidSDK/build-tools_r36_linux.zip
 curl -L -O https://mirrors.cloud.tencent.com/AndroidSDK/platform-tools_r35.0.2-linux.zip
 
-# 1) build-tools：zip 解压出的目录是 android-15/，把内容移到 build-tools/35.0.0/
-unzip build-tools_r35_linux.zip -d ~/android/sdk
-mkdir -p ~/android/sdk/build-tools/35.0.0
-mv ~/android/sdk/android-15/* ~/android/sdk/build-tools/35.0.0/
+# 1) build-tools：zip 解压出的目录名形如 android-16/，把内容移到 build-tools/36.0.0/
+unzip build-tools_r36_linux.zip -d ~/android/sdk
+mkdir -p ~/android/sdk/build-tools/36.0.0
+mv ~/android/sdk/android-16/* ~/android/sdk/build-tools/36.0.0/
 
-# 2) platform：解压出 android-36/
-unzip platform-36_r01.zip -d ~/android/sdk
+# 2) platform：解压出 android-37.0/
+unzip platform-37.0_r02.zip -d ~/android/sdk
 mkdir -p ~/android/sdk/platforms
-mv ~/android/sdk/android-36 ~/android/sdk/platforms/android-36
+mv ~/android/sdk/android-37.0 ~/android/sdk/platforms/android-37.0
 
 # 3) platform-tools：解压即得 platform-tools/，无需移动
 unzip platform-tools_r35.0.2-linux.zip -d ~/android/sdk
@@ -130,14 +130,14 @@ unzip /workspace/android-sdk-tools-static-aarch64.zip -d ~/armtools35
 替换 SDK 里的二进制：
 
 ```bash
-cp -p ~/armtools35/build-tools/* ~/android/sdk/build-tools/35.0.0/
+cp -p ~/armtools35/build-tools/* ~/android/sdk/build-tools/36.0.0/
 cp -p ~/armtools35/platform-tools/* ~/android/sdk/platform-tools/
 ```
 
 验证 `aapt2` 可执行：
 
 ```bash
-~/android/sdk/build-tools/35.0.0/aapt2 version
+~/android/sdk/build-tools/36.0.0/aapt2 version
 # 应输出版本号，不报错
 ```
 
@@ -157,7 +157,7 @@ aapt2 覆盖配置写入全局文件，不要写进项目的 `gradle.properties`
 
 ```bash
 mkdir -p ~/.gradle
-echo "android.aapt2FromMavenOverride=/root/android/sdk/build-tools/35.0.0/aapt2" > ~/.gradle/gradle.properties
+echo "android.aapt2FromMavenOverride=/root/android/sdk/build-tools/36.0.0/aapt2" > ~/.gradle/gradle.properties
 ```
 
 ### apt 源（可选）
@@ -186,7 +186,7 @@ unzip gradle.zip -d /workspace/tools
 
 ```bash
 cd /workspace
-JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64 \
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk-arm64 \
 ANDROID_HOME=/root/android/sdk \
 ./gradlew assembleDebug
 ```
@@ -211,7 +211,7 @@ app/build/outputs/apk/<flavor>/debug/app-<flavor>-debug.apk
 
 | 现象 | 原因 | 解决 |
 | --- | --- | --- |
-| `JAVA_HOME is not set` | 未设环境变量 | 命令行加 `JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64` |
+| `JAVA_HOME is not set` | 未设环境变量 | 命令行加 `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-arm64` |
 | `SDK location not found` | 缺 local.properties | 创建 `local.properties` 写入 `sdk.dir=/root/android/sdk` |
 | `aapt2 syntax error` | 用了 x86 版 aapt2 | 确认 `~/.gradle/gradle.properties` 里的 `aapt2FromMavenOverride` 指向 ARM 版 |
 | `Failed to install build-tools` | AGP 联网验证失败 | 确认本地已装项目所需的 build-tools 版本 |
