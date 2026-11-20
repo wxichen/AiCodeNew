@@ -251,6 +251,15 @@
     <string name="common_prev">上一页</string>
     <string name="common_next">下一页</string>
     <string name="settings_add_provider">添加供应商</string>
+    <string name="mode_build">构建</string>
+    <string name="mode_plan">计划</string>
+    <string name="mode_auto">自动</string>
+    <string name="chat_mode_long_press_hint">长按设置新建会话的默认模式</string>
+    <string name="chat_default_mode_title">新建会话默认模式</string>
+    <string name="chat_default_mode_desc">只影响之后新建的会话，当前会话已选的模式不变</string>
+    <string name="mode_build_desc">可读写文件，修改与命令需逐次授权</string>
+    <string name="mode_plan_desc">只读探索与出方案，拦截修改类操作</string>
+    <string name="mode_auto_desc">自动放行所有权限，不再弹授权确认</string>
     <string name="settings_reconnect">重新连接</string>
     <string name="settings_add_mcp_server">添加 MCP 服务器</string>
     <string name="settings_refresh_logs">刷新日志</string>    <string name="settings_vision_follow_chat">跟随当前聊天模型</string>

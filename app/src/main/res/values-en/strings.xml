@@ -251,6 +251,15 @@
     <string name="common_prev">Previous</string>
     <string name="common_next">Next</string>
     <string name="settings_add_provider">Add vendor</string>
+    <string name="mode_build">Build</string>
+    <string name="mode_plan">Plan</string>
+    <string name="mode_auto">Auto</string>
+    <string name="chat_mode_long_press_hint">Long-press to set the default for new sessions</string>
+    <string name="chat_default_mode_title">Default mode for new sessions</string>
+    <string name="chat_default_mode_desc">Applies only to sessions created afterwards; the current session keeps its mode</string>
+    <string name="mode_build_desc">Can read and write files; each edit and command needs approval</string>
+    <string name="mode_plan_desc">Read-only exploration and planning; edits are blocked</string>
+    <string name="mode_auto_desc">Grants every permission without asking</string>
     <string name="settings_reconnect">Reconnect</string>
     <string name="settings_add_mcp_server">Add MCP server</string>
     <string name="settings_refresh_logs">Refresh logs</string>    <string name="settings_vision_follow_chat">Follow current chat model</string>

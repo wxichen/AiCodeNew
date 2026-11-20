@@ -243,7 +243,9 @@ fun SettingsScreen(
     onRerunOnboarding: () -> Unit = {},
     onboardingStep: OnboardingStep? = null,
     onOnboardingModelAdded: (() -> Unit)? = null,
-    onOnboardingDismissFetchDialog: (() -> Unit)? = null
+    onOnboardingDismissFetchDialog: (() -> Unit)? = null,
+    /** 消费「首页直达供应商」标记；进入后立即调用，保证只影响这一次进入。 */
+    onDirectEntryConsumed: () -> Unit = {}
 ) {
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
@@ -333,7 +335,13 @@ fun SettingsScreen(
     }
 
 
-    var section by remember { mutableStateOf(SettingsSection.Menu) }
+    // 直达入口：首页模型弹层「添加供应商」进来时直接落在供应商分区，返回也直接回首页。
+    val directEntry by viewModel.directEntry.collectAsStateWithLifecycle()
+    var section by remember { mutableStateOf(if (directEntry) SettingsSection.Providers else SettingsSection.Menu) }
+    val fromDirectEntry = remember { directEntry }
+    LaunchedEffect(directEntry) {
+        if (directEntry) onDirectEntryConsumed()
+    }
     var logReturnSection by remember { mutableStateOf(SettingsSection.Menu) }
     // 各列表页的多选状态：顶栏「多选」开关在本页 Scaffold 里，所以状态必须提到这里统一持有。
     // 用普通 map（非 snapshot）新建容器，避免在组合期写快照状态；Compose 状态在 ListSelectionState 内部。
@@ -545,6 +553,9 @@ fun SettingsScreen(
     // 返回目标：null 表示没有上一层，返回动作交还上层导航（退出设置页）。
     // 大屏左菜单常驻，一级分区页没有「上一层」——回菜单只会得到一个空占位。
     // 返回键与顶栏返回箭头共用这一份判定，不再各写一套（之前两处不一致，镜像下载页返回会直接跳回菜单）。
+    // 直达入口只在「AI 供应商」这一层有效：它没有设置主菜单这一层，返回直接退出设置页回首页。
+    // 一旦进入编辑页等更深层，仍按正常层级回退到供应商列表。
+    val directProvidersRoot = fromDirectEntry && section == SettingsSection.Providers
     val parentSection: SettingsSection? = when (section) {
         SettingsSection.Menu -> null
         SettingsSection.ProviderEditor -> SettingsSection.Providers
@@ -560,7 +571,7 @@ fun SettingsScreen(
         SettingsSection.PluginDevDetail -> SettingsSection.Plugins
         SettingsSection.PluginPage -> if (expanded) null else SettingsSection.Menu
         SettingsSection.ContainerDownloads -> SettingsSection.Container
-        else -> if (expanded) null else SettingsSection.Menu
+        else -> if (expanded || directProvidersRoot) null else SettingsSection.Menu
     }
 
     // 有上一层时系统返回键先回上一层；没有则交还给上层导航。

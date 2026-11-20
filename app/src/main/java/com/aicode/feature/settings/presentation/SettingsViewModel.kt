@@ -786,6 +786,23 @@ class SettingsViewModel @Inject constructor(
     /** 当前执行模式（本地 PRoot / 远程 SSH），供 UI 判断是否显示远程连接指示器。 */
     val executionMode: StateFlow<ExecutionMode> = executionModeHolder.mode
 
+    /**
+     * 是否由「首页模型弹层 → 添加供应商」直达设置页。
+     *
+     * 置位时设置页直接落在「AI 供应商」分区，且返回直接回首页——不经过设置主菜单。
+     * 设置页消费后由 [consumeDirectEntry] 复位，避免影响后续从侧边栏进入的正常路径。
+     */
+    private val _directEntry = MutableStateFlow(false)
+    val directEntry: StateFlow<Boolean> = _directEntry.asStateFlow()
+
+    fun openProvidersSection() {
+        _directEntry.value = true
+    }
+
+    fun consumeDirectEntry() {
+        _directEntry.value = false
+    }
+
     /** 远程 SSH 连接状态，供 UI 显示指示器。 */
     val connectionState: StateFlow<ConnectionState> = remoteSshConnection.connectionState
 

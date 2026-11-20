@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -379,7 +380,9 @@ internal fun ModelSelectionSheet(
     onDismiss: () -> Unit,
     onTestModel: ((provider: AIProviderConfig, model: String) -> Unit)? = null,
     testingModels: Set<String> = emptySet(),
-    testResults: Map<String, ModelTestResult> = emptyMap()
+    testResults: Map<String, ModelTestResult> = emptyMap(),
+    /** 右上角「添加供应商」；null 时不显示入口（设置页内的模型选择无需跳转）。 */
+    onAddProvider: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
@@ -412,6 +415,17 @@ internal fun ModelSelectionSheet(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
+                onAddProvider?.let { addProvider ->
+                    Text(
+                        text = stringResource(R.string.settings_add_provider),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { addProvider() }
+                            .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                    )
+                }
                 onClear?.let { onClear ->
                     Text(
                         text = stringResource(R.string.common_reset),

@@ -44,6 +44,8 @@ data class BackupSnapshot(
     val deleteExternalWorkspaceSessions: Boolean = false,
     // 默认 false：旧备份没有该字段时，导入不应把用户显式关掉的开关重新打开。
     val confirmBeforeExit: Boolean = false,
+    /** 新建会话默认运行模式（AgentMode.name）；null 时回退 BUILD。 */
+    val defaultSessionMode: String? = null,
     val logLevel: String? = null,
     val visionProviderId: String = "",
     val visionModel: String = "",
@@ -85,6 +87,8 @@ data class BackupMetadata(
     val deleteExternalWorkspaceSessions: Boolean = false,
     // 默认 false：旧备份没有该字段时，导入不应把用户显式关掉的开关重新打开。
     val confirmBeforeExit: Boolean = false,
+    /** 新建会话默认运行模式（AgentMode.name）；null 时回退 BUILD。 */
+    val defaultSessionMode: String? = null,
     val logLevel: String? = null,
     val visionProviderId: String = "",
     val visionModel: String = "",
@@ -129,6 +133,7 @@ fun BackupSnapshot.toMetadata() = BackupMetadata(
     sendFileMaxSizeMb = sendFileMaxSizeMb,
     deleteExternalWorkspaceSessions = deleteExternalWorkspaceSessions,
     confirmBeforeExit = confirmBeforeExit,
+    defaultSessionMode = defaultSessionMode,
     logLevel = logLevel,
     visionProviderId = visionProviderId,
     visionModel = visionModel,

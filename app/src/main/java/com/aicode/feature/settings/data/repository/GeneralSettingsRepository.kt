@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.aicode.core.datastore.preferencesCorruptionHandler
+import com.aicode.feature.agent.domain.model.AgentMode
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -58,6 +59,8 @@ class GeneralSettingsRepository @Inject constructor(
         val DELETE_EXTERNAL_WORKSPACE_SESSIONS_KEY = booleanPreferencesKey("delete_external_workspace_sessions")
         /** 退出 App 前是否弹二次确认（默认开启）。 */
         val CONFIRM_BEFORE_EXIT_KEY = booleanPreferencesKey("confirm_before_exit")
+        /** 新建会话的默认运行模式（AgentMode.name，默认 BUILD）。 */
+        val DEFAULT_SESSION_MODE_KEY = stringPreferencesKey("default_session_mode")
         /** 「提示词」页使用说明公告已展示内容的哈希；无值或与当前内容哈希不一致时重新弹出。 */
         val PROMPTS_ANNOUNCEMENT_SHOWN_HASH_KEY = stringPreferencesKey("prompts_announcement_shown_hash")
 
@@ -276,6 +279,30 @@ class GeneralSettingsRepository @Inject constructor(
 
     suspend fun markPromptsAnnouncementShown(hash: String) {
         context.generalDataStore.edit { it[PROMPTS_ANNOUNCEMENT_SHOWN_HASH_KEY] = hash }
+    }
+
+    /** 新建会话的默认运行模式；无值或无法识别时回退 [AgentMode.BUILD]。 */
+    val defaultSessionModeFlow: Flow<AgentMode> = context.generalDataStore.data.map { prefs ->
+        prefs[DEFAULT_SESSION_MODE_KEY]
+            ?.let { name -> AgentMode.entries.firstOrNull { it.name == name } }
+            ?: AgentMode.BUILD
+    }
+
+    suspend fun setDefaultSessionMode(mode: AgentMode) {
+        context.generalDataStore.edit { it[DEFAULT_SESSION_MODE_KEY] = mode.name }
+    }
+
+    /** 新建会话前读一次默认模式，避免在会话创建路径上多开一条收集流。 */
+    suspend fun defaultSessionMode(): AgentMode = defaultSessionModeFlow.first()
+
+    /** 备份快照：新建会话默认运行模式。 */
+    suspend fun defaultSessionModeSnapshot(): String = defaultSessionModeFlow.first().name
+
+    /** 从备份还原默认运行模式；旧备份无此字段（null）或值无法识别时回退 BUILD。 */
+    suspend fun restoreDefaultSessionMode(mode: String?) {
+        setDefaultSessionMode(
+            AgentMode.entries.firstOrNull { it.name == mode } ?: AgentMode.BUILD
+        )
     }
 
     /** 备份快照：外部工作区聊天记录处理偏好。 */

@@ -730,6 +730,8 @@ fun AIChatPanel(
     onboardingStep: OnboardingStep? = null,
     onSelectModelInOnboarding: (() -> Unit)? = null,
     onDismissModelSheetInOnboarding: (() -> Unit)? = null,
+    /** 模型弹层右上角「添加供应商」：跳转到 AI 供应商页，返回时直接回首页。 */
+    onAddProvider: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val agentState by viewModel.agentState.collectAsStateWithLifecycle()
@@ -740,6 +742,8 @@ fun AIChatPanel(
     val subAgentCards by viewModel.subAgentCards.collectAsStateWithLifecycle()
 
     val currentSessionId by viewModel.currentSessionId.collectAsStateWithLifecycle()
+    // 底部模式按钮长按改的是「新建会话」默认值，与当前会话的 currentMode 无关。
+    val defaultSessionMode by viewModel.defaultSessionMode.collectAsStateWithLifecycle()
     // 工具卡片入场调度：只排本次浏览期间新追加到尾部的 TOOL 消息，逐个错开淡入。
     // 换会话时调度器重建，新会话的存量消息不入场。
     val entryScheduler = remember(currentSessionId) { MessageEntryScheduler() }
@@ -1917,6 +1921,9 @@ fun AIChatPanel(
                 onModelSheetDismiss = onDismissModelSheetInOnboarding,
                 // 主页模型弹层的「测试」按钮：直接复用设置页的连通性测试链路，状态由弹层自己持有。
                 onRunModelTest = settingsViewModel?.let { svm -> { p, m -> svm.runModelTest(p, m) } },
+                onAddProvider = onAddProvider,
+                defaultSessionMode = defaultSessionMode,
+                onSetDefaultSessionMode = { viewModel.setDefaultSessionMode(it) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .onboardingTarget(OnboardingStep.SEND_MESSAGE)

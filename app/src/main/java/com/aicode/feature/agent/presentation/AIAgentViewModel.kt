@@ -1360,6 +1360,14 @@ class AIAgentViewModel @Inject constructor(
     val autoExpandReasoning: StateFlow<Boolean> = generalSettingsRepository.autoExpandReasoningFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    /** 新建会话的默认运行模式（首页底部模式按钮长按修改）。 */
+    val defaultSessionMode: StateFlow<AgentMode> = generalSettingsRepository.defaultSessionModeFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AgentMode.BUILD)
+
+    fun setDefaultSessionMode(mode: AgentMode) {
+        viewModelScope.launch { generalSettingsRepository.setDefaultSessionMode(mode) }
+    }
+
     /** 当前会话绑定的 providerId/model（null 表示未绑定，回退全局 active provider）。 */
     val currentSessionProviderModel: StateFlow<Pair<String?, String?>> = combine(
         currentSessionState,
@@ -2777,12 +2785,14 @@ class AIAgentViewModel @Inject constructor(
         } else {
             ReasoningEffort.MEDIUM.name
         }
-        return sessionUseCase.newSessionEntity(
+        val entity = sessionUseCase.newSessionEntity(
             workspacePath = workspacePath,
             providerId = providerId,
             model = model,
             reasoningEffort = effort
         )
+        // 只决定新会话的初始模式；已有会话的 mode 不被这条偏好影响。
+        return entity.copy(mode = generalSettingsRepository.defaultSessionMode().name)
     }
 
     // endregion

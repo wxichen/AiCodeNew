@@ -923,6 +923,12 @@ fun AppNavigation(
                                         if (onboardingUiState.active && onboardingUiState.step == OnboardingStep.SIMULATE_CHOOSE_MODEL) {
                                             onboardingCoordinator.goToStep(OnboardingStep.OPEN_MODEL_PICKER)
                                         }
+                                    },
+                                    onAddProvider = {
+                                        // 从首页模型弹层直达「AI 供应商」：把设置页压栈成一次跳转，
+                                        // 返回时直接回首页，不用先退回设置主菜单。
+                                        settingsViewModel.openProvidersSection()
+                                        navController.navigate("settings")
                                     }
                                 )
                             }
@@ -983,6 +989,8 @@ fun AppNavigation(
                         // 大屏返回聊天页后侧栏本就常驻，不再弹 modal 抽屉。
                         if (!expanded) scope.launch { drawerState.open() }
                     },
+                    // 从首页模型弹层「添加供应商」进来时，设置页返回直接回首页（不经过设置主菜单）。
+                    onDirectEntryConsumed = { settingsViewModel.consumeDirectEntry() },
                     onStopAllAndCloseTerminal = { agentViewModel.stopAllAndCloseTerminal() },
                     onRerunOnboarding = {
                         // 从设置页「重新运行引导」：清状态回 in_progress、激活引导并回聊天页。

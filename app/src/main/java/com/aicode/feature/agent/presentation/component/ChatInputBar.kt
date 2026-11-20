@@ -13,6 +13,10 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.aicode.core.ui.AdaptiveModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,6 +40,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -145,6 +150,7 @@ private val INPUT_FIELD_MAX_HEIGHT = 140.dp
  */
 private val INPUT_FIELD_CONTENT_PADDING = 16.dp
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatInputBar(
     value: String,
@@ -202,6 +208,11 @@ internal fun ChatInputBar(
     onModelSheetDismiss: (() -> Unit)? = null,
     /** 主页模型弹层的连通性测试：null（无设置页 ViewModel 的宿主）时弹层不显示测试按钮。 */
     onRunModelTest: (suspend (AIProviderConfig, String) -> ModelTestResult)? = null,
+    /** 模型弹层右上角「添加供应商」；null 时隐藏该入口（设置页等宿主不提供跳转）。 */
+    onAddProvider: (() -> Unit)? = null,
+    /** 新建会话的默认模式（长按模式按钮修改）；null 时长按不弹窗。 */
+    defaultSessionMode: AgentMode? = null,
+    onSetDefaultSessionMode: ((AgentMode) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val hasContent = value.isNotBlank() || pendingAttachments.isNotEmpty()
@@ -568,18 +579,27 @@ internal fun ChatInputBar(
                             AgentMode.AUTO -> MaterialTheme.colorScheme.onError
                             AgentMode.BUILD -> MaterialTheme.semanticColors.onSuccess
                         }
+                        var showDefaultModeSheet by remember { mutableStateOf(false) }
+                        val cycleMode: () -> Unit = {
+                            val nextMode = when (currentMode) {
+                                AgentMode.PLAN -> AgentMode.AUTO
+                                AgentMode.AUTO -> AgentMode.BUILD
+                                AgentMode.BUILD -> AgentMode.PLAN
+                            }
+                            onToggleMode(nextMode)
+                        }
                         Surface(
                             shape = RoundedCornerShape(16.dp),
                             color = modeColor,
-                            modifier = Modifier
-                                .clickable {
-                                    val nextMode = when (currentMode) {
-                                        AgentMode.BUILD -> AgentMode.PLAN
-                                        AgentMode.PLAN -> AgentMode.AUTO
-                                        AgentMode.AUTO -> AgentMode.BUILD
-                                    }
-                                    onToggleMode(nextMode)
-                                }
+                            modifier = if (onSetDefaultSessionMode != null) {
+                                // 轻点切换当前会话模式；长按改的是「新建会话」的默认模式，两者互不影响。
+                                Modifier.combinedClickable(
+                                    onClick = cycleMode,
+                                    onLongClick = { showDefaultModeSheet = true }
+                                )
+                            } else {
+                                Modifier.clickable(onClick = cycleMode)
+                            }
                         ) {
                             Box(
                                 modifier = Modifier
@@ -588,13 +608,23 @@ internal fun ChatInputBar(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = currentMode.name,
+                                    text = stringResource(currentMode.labelRes()),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = modeTextColor
                                     )
                                 )
                             }
+                        }
+                        if (showDefaultModeSheet && onSetDefaultSessionMode != null) {
+                            DefaultSessionModeSheet(
+                                current = defaultSessionMode ?: AgentMode.BUILD,
+                                onSelect = {
+                                    onSetDefaultSessionMode(it)
+                                    showDefaultModeSheet = false
+                                },
+                                onDismiss = { showDefaultModeSheet = false }
+                            )
                         }
                         Spacer(Modifier.width(Spacing.xs))
 
@@ -606,6 +636,7 @@ internal fun ChatInputBar(
                             forceOpenSheet = forceOpenModelSheet,
                             onSelectSuccessInOnboarding = onSelectModelInOnboarding,
                             onSheetDismiss = onModelSheetDismiss,
+                            onAddProvider = onAddProvider,
                             runModelTest = onRunModelTest,
                             modifier = Modifier.onboardingTarget(OnboardingStep.OPEN_MODEL_PICKER)
                         )
@@ -1375,6 +1406,89 @@ private fun GoalBannerRow(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
                 )
+            }
+        }
+    }
+}
+/** 底部模式按钮的短标签。 */
+internal fun AgentMode.labelRes(): Int = when (this) {
+    AgentMode.BUILD -> R.string.mode_build
+    AgentMode.PLAN -> R.string.mode_plan
+    AgentMode.AUTO -> R.string.mode_auto
+}
+
+internal fun AgentMode.descRes(): Int = when (this) {
+    AgentMode.BUILD -> R.string.mode_build_desc
+    AgentMode.PLAN -> R.string.mode_plan_desc
+    AgentMode.AUTO -> R.string.mode_auto_desc
+}
+
+/**
+ * 新建会话的默认运行模式选择。刻意与「当前会话模式」分开：挑这里只改后续新会话的初始值，
+ * 当前会话仍用底部按钮独立切换。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DefaultSessionModeSheet(
+    current: AgentMode,
+    onSelect: (AgentMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    AdaptiveModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg)
+                .padding(bottom = Spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            Text(
+                text = stringResource(R.string.chat_default_mode_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = Spacing.md)
+            )
+            Text(
+                text = stringResource(R.string.chat_default_mode_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            AgentMode.entries.forEach { mode ->
+                val selected = mode == current
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onSelect(mode) }
+                        .padding(horizontal = Spacing.md, vertical = Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(mode.labelRes()),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(mode.descRes()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (selected) {
+                        Icon(
+                            imageVector = FeatherIcons.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
     }
