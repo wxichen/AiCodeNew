@@ -982,15 +982,20 @@ fun AppNavigation(
                 // 复用 Activity 级 settingsViewModel（MainActivity 顶部已创建并 init），
                 // 避免进入设置页时再建一个 NavBackStackEntry 级实例、重复跑 init 与 9 路 flow 订阅，
                 // 这是侧边栏点设置「卡一下」的主因。
+                // 从首页模型弹层「添加供应商」直达设置页时置位，用于区分两条返回路径。
+                var openedFromModelSheet by remember { mutableStateOf(false) }
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     onNavigateBack = {
                         navController.popBackStack()
+                        // 常规入口：回聊天页时把侧边栏弹出来，方便继续选会话/文件；
+                        // 直达入口不弹——用户是从首页模型弹层过来的，回去应看到原来的聊天界面。
                         // 大屏返回聊天页后侧栏本就常驻，不再弹 modal 抽屉。
-                        if (!expanded) scope.launch { drawerState.open() }
+                        if (!expanded && !openedFromModelSheet) scope.launch { drawerState.open() }
                     },
                     // 从首页模型弹层「添加供应商」进来时，设置页返回直接回首页（不经过设置主菜单）。
                     onDirectEntryConsumed = { settingsViewModel.consumeDirectEntry() },
+                    onDirectEntryChange = { openedFromModelSheet = it },
                     onStopAllAndCloseTerminal = { agentViewModel.stopAllAndCloseTerminal() },
                     onRerunOnboarding = {
                         // 从设置页「重新运行引导」：清状态回 in_progress、激活引导并回聊天页。

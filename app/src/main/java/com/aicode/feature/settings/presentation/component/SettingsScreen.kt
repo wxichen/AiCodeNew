@@ -245,7 +245,14 @@ fun SettingsScreen(
     onOnboardingModelAdded: (() -> Unit)? = null,
     onOnboardingDismissFetchDialog: (() -> Unit)? = null,
     /** 消费「首页直达供应商」标记；进入后立即调用，保证只影响这一次进入。 */
-    onDirectEntryConsumed: () -> Unit = {}
+    onDirectEntryConsumed: () -> Unit = {},
+    /**
+     * 本次进入是否来自首页模型弹层的「添加供应商」。
+     *
+     * 直达入口返回时直接回首页，宿主据此不再代它弹出侧边栏——用户是从首页弹层过来的，
+     * 回去时应该看到原来的聊天界面，而不是被侧边栏挡住。
+     */
+    onDirectEntryChange: (Boolean) -> Unit = {}
 ) {
     val providers by viewModel.providers.collectAsStateWithLifecycle()
     val logLevel by viewModel.logLevel.collectAsStateWithLifecycle()
@@ -339,6 +346,9 @@ fun SettingsScreen(
     val directEntry by viewModel.directEntry.collectAsStateWithLifecycle()
     var section by remember { mutableStateOf(if (directEntry) SettingsSection.Providers else SettingsSection.Menu) }
     val fromDirectEntry = remember { directEntry }
+    LaunchedEffect(Unit) {
+        onDirectEntryChange(fromDirectEntry)
+    }
     LaunchedEffect(directEntry) {
         if (directEntry) onDirectEntryConsumed()
     }
