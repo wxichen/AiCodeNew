@@ -79,7 +79,6 @@ import com.aicode.feature.settings.data.repository.AgentSoundSettingsRepository
 import com.aicode.feature.settings.data.repository.KeepaliveSettingsRepository
 import com.aicode.feature.settings.data.repository.LiveNotificationSettingsRepository
 import com.aicode.feature.settings.data.repository.ApprovalNotificationSettingsRepository
-import com.aicode.feature.settings.data.repository.LanguageSettingsRepository
 import com.aicode.feature.settings.data.repository.LogSettingsRepository
 import com.aicode.feature.settings.data.repository.ProxyConfig
 import com.aicode.feature.settings.data.repository.ProxySettingsRepository
@@ -370,7 +369,6 @@ class SettingsViewModel @Inject constructor(
     private val liveNotificationSettingsRepository: LiveNotificationSettingsRepository,
     private val approvalNotificationSettingsRepository: ApprovalNotificationSettingsRepository,
     private val generalSettingsRepository: GeneralSettingsRepository,
-    private val languageSettingsRepository: LanguageSettingsRepository,
     private val mcpConfigRepository: McpConfigRepository,
     private val mcpManager: McpManager,
     private val permissionRulesRepository: PermissionRulesRepository,
@@ -637,7 +635,13 @@ class SettingsViewModel @Inject constructor(
     private var backgroundAlphaWriteJob: Job? = null
 
     /** 用户选择的应用语言 tag（null 表示跟随系统）。 */
-    private val _languageTag = MutableStateFlow<String?>(null)
+    /**
+     * 界面语言固定为中文（不再提供切换）。
+     *
+     * 仍保留这个流：公告等资源按语言 tag 选择文案，固定 zh 可避免设备系统语言为英文时
+     * 取到不存在的英文公告。
+     */
+    private val _languageTag = MutableStateFlow<String?>("zh")
     val languageTag: StateFlow<String?> = _languageTag.asStateFlow()
 
     private val _mcpEntries = MutableStateFlow<List<McpServerEntry>>(emptyList())
@@ -1101,9 +1105,6 @@ class SettingsViewModel @Inject constructor(
             }
 
             launch {
-                languageSettingsRepository.languageFlow.collectLatest {
-                    _languageTag.value = it
-                }
             }
 
             launch {
@@ -2307,13 +2308,6 @@ class SettingsViewModel @Inject constructor(
         backgroundAlphaWriteJob = viewModelScope.launch {
             delay(BACKGROUND_ALPHA_WRITE_DEBOUNCE_MS)
             backgroundSettingsRepository.setBackgroundAlpha(alpha)
-        }
-    }
-
-    /** 设置应用语言；tag 为空字符串或 null 表示跟随系统。 */
-    fun setLanguage(tag: String?) {
-        viewModelScope.launch {
-            languageSettingsRepository.setLanguage(tag?.takeIf { it.isNotBlank() })
         }
     }
 

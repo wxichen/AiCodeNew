@@ -334,12 +334,6 @@ fun SettingsScreen(
     var showTerminalSettingsSheet by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val currentLanguageDisplayName = if (languageTag.isNullOrBlank()) {
-        stringResource(R.string.language_follow_system)
-    } else {
-        com.aicode.core.util.LanguageRegistry.languages.firstOrNull { it.tag == languageTag }?.displayName
-            ?: stringResource(R.string.language_follow_system)
-    }
 
 
     // 直达入口：首页模型弹层「添加供应商」进来时直接落在供应商分区，返回也直接回首页。
@@ -554,7 +548,6 @@ fun SettingsScreen(
     var showImageSourceSheet by remember { mutableStateOf(false) }
     var showThemeSheet by remember { mutableStateOf(false) }
     var showBackgroundSheet by remember { mutableStateOf(false) }
-    var showLanguageSheet by remember { mutableStateOf(false) }
     var showResetTokenStats by remember { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -681,13 +674,11 @@ fun SettingsScreen(
             themePresetId = themePresetId,
             dynamicColorEnabled = dynamicColorEnabled,
             terminalSettings = terminalSettings,
-            currentLanguageDisplayName = currentLanguageDisplayName,
             backgroundImagePath = backgroundImagePath,
             backgroundAlpha = backgroundAlpha,
             onOpenThemeSheet = { showThemeSheet = true },
             onOpenTerminalSettingsSheet = { showTerminalSettingsSheet = true },
             onOpenBackgroundSheet = { showBackgroundSheet = true },
-            onOpenLanguageSheet = { showLanguageSheet = true },
             onOpenManual = {
                 context.startActivity(
                     Intent(Intent.ACTION_VIEW, Uri.parse(USER_GUIDE_DOCS_URL))
@@ -1734,14 +1725,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showLanguageSheet) {
-        LanguageSelectionSheet(
-            currentTag = languageTag,
-            onSelect = { viewModel.setLanguage(it) },
-            onDismiss = { showLanguageSheet = false }
-        )
-    }
-
     if (showImageSourceSheet) {
         SourceSelectionSheet(
             options = imageSourceOptions.map { it to viewModel.sourceDisplayName(it, languageTag) },
@@ -2035,13 +2018,11 @@ internal fun SettingsMenu(
     themePresetId: String?,
     dynamicColorEnabled: Boolean,
     terminalSettings: TerminalSettings,
-    currentLanguageDisplayName: String,
     backgroundImagePath: String?,
     backgroundAlpha: Float,
     onOpenThemeSheet: () -> Unit,
     onOpenTerminalSettingsSheet: () -> Unit,
     onOpenBackgroundSheet: () -> Unit,
-    onOpenLanguageSheet: () -> Unit,
     onOpenManual: () -> Unit,
     onRerunOnboarding: () -> Unit,
     pluginPages: List<PluginPage>,
@@ -2105,19 +2086,6 @@ internal fun SettingsMenu(
                     Text(
                         text = if (backgroundImagePath != null) "${BackgroundSettingsRepository.alphaToSlider(backgroundAlpha).toInt()}%"
                         else stringResource(R.string.settings_background_image_none),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.semanticColors.subtleText
-                    )
-                }
-            )
-            SettingsDivider()
-            SettingsRow(
-                icon = FeatherIcons.Globe,
-                title = stringResource(R.string.settings_language),
-                onClick = onOpenLanguageSheet,
-                trailing = {
-                    Text(
-                        text = currentLanguageDisplayName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.semanticColors.subtleText
                     )

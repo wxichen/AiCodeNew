@@ -173,10 +173,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var screenOnSettings: ScreenOnSettingsRepository
 
-    /** 语言偏好：attachBaseContext 时同步读取以应用 locale，变化时 recreate。 */
-    @Inject
-    lateinit var languageSettings: com.aicode.feature.settings.data.repository.LanguageSettingsRepository
-
     /** App 回到前台时，远程模式下若 SSH 断了触发重连。 */
     @Inject
     lateinit var remoteSshConnection: com.aicode.feature.agent.domain.container.RemoteSshConnection
@@ -199,18 +195,11 @@ class MainActivity : ComponentActivity() {
     lateinit var browserManager: com.aicode.feature.agent.domain.tool.browser.BrowserManager
 
     override fun attachBaseContext(newBase: android.content.Context) {
-        // 在 Activity 创建前同步应用用户选择的语言，确保冷启动也生效。
-        // Hilt 尚未注入，直接从 SharedPreferences 同步读取。
-        val tag = newBase.getSharedPreferences("language_prefs_sync", android.content.Context.MODE_PRIVATE)
-            .getString("language_tag", null)
-        val context = if (tag.isNullOrBlank()) {
-            newBase
-        } else {
-            val config = android.content.res.Configuration(newBase.resources.configuration)
-            config.setLocale(java.util.Locale.forLanguageTag(tag))
-            newBase.createConfigurationContext(config)
-        }
-        super.attachBaseContext(context)
+        // 界面语言固定中文：早期版本允许切到英文，残留的偏好（language_prefs_sync 里存 "en"）
+        // 会让系统语言为英文时加载英文资源——现在英文资源已移除，必须强制中文。
+        val config = android.content.res.Configuration(newBase.resources.configuration)
+        config.setLocale(java.util.Locale.SIMPLIFIED_CHINESE)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
     }
 
     @Suppress("DEPRECATION") // 全局更新 application resources locale，createConfigurationContext 无法替代
@@ -229,24 +218,14 @@ class MainActivity : ComponentActivity() {
         }
         findViewById<android.view.ViewGroup>(android.R.id.content)?.addView(hiddenHost)
         browserManager.attachHiddenHost(hiddenHost)
-        // 监听语言偏好变化，更新 Application/Activity locale 后重建。
-        lifecycleScope.launch {
-            languageSettings.languageFlow.drop(1).distinctUntilChanged().collect { tag ->
-                // 同步更新 Application context 的 Configuration，确保非 Activity 来源的
-                // Resources（如 ViewModel 中 context.getString）也能拿到正确 locale。
-                val app = applicationContext
-                if (tag.isNullOrBlank()) {
-                    // 跟随系统：重置为系统默认 Configuration
-                    val sysConfig = android.content.res.Configuration(resources.configuration)
-                    sysConfig.setLocale(java.util.Locale.getDefault())
-                    app.resources.updateConfiguration(sysConfig, app.resources.displayMetrics)
-                } else {
-                    val config = android.content.res.Configuration(app.resources.configuration)
-                    config.setLocale(java.util.Locale.forLanguageTag(tag))
-                    app.resources.updateConfiguration(config, app.resources.displayMetrics)
-                }
-                recreate()
-            }
+        // 界面语言固定中文（不提供切换）：把 Application context 的 Configuration 也设成中文，
+        // 否则系统语言为英文时，非 Activity 来源的 Resources（如 ViewModel 里 context.getString）
+        // 会取不到中文文案。
+        run {
+            val app = applicationContext
+            val config = android.content.res.Configuration(app.resources.configuration)
+            config.setLocale(java.util.Locale.SIMPLIFIED_CHINESE)
+            app.resources.updateConfiguration(config, app.resources.displayMetrics)
         }
         // 屏幕常亮：窗口标志只在 Activity 可见时约束屏幕，退到后台系统自动放开，无需手动释放。
         lifecycleScope.launch {

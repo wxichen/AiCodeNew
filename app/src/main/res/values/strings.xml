@@ -152,7 +152,6 @@
     <string name="settings_shizuku_hint_ready">已获授权，AI 可通过 adb shell 执行命令</string>
     <string name="settings_backup">备份与还原</string>
     <string name="settings_about">关于</string>
-    <string name="settings_language">语言</string>
     <string name="settings_token_stats_title">Token 统计</string>
 
     <!-- Token 统计页 -->
@@ -243,7 +242,6 @@
     <string name="storage_logs_ai">AI 请求日志</string>
 
     <!-- 语言设置页 -->
-    <string name="language_follow_system">跟随系统</string>
 
     <!-- SettingsScreen 通用 -->
     <string name="common_back">返回</string>
@@ -441,7 +439,6 @@
     <string name="common_local">本地</string>
     <string name="common_model">模型</string>
     <!-- 档位名后附接口值，如「最高（max）」，便于对照模型文档与报错文案。 -->
-    <string name="common_label_with_api">%1$s（%2$s）</string>
     <string name="common_add">添加</string>
     <string name="credential_add">添加凭据</string>
     <string name="common_username">用户名</string>
@@ -511,7 +508,7 @@
     <string name="chat_reasoning_effective">实际生效：%1$s</string>
     <string name="chat_reasoning_unknown_hint">未识别到该模型支持的档位，所选档位可能不生效</string>
     <string name="chat_reasoning_cannot_disable">该模型无法关闭思考，已改用最低档</string>
-    <string name="chat_reasoning_endpoint_weak">当前端点可能忽略「关闭」，改用该厂商的新版端点（Responses）才能真关闭</string>
+    <string name="chat_reasoning_endpoint_weak">当前端点可能忽略「关闭」，改用该厂商的新版端点才能真关闭</string>
     <string name="provider_model_section_reasoning">思考档位</string>
     <string name="provider_model_reasoning_hint">只勾选该模型真实支持的档位；全部不勾则由内置能力表自动判断</string>
     <string name="provider_model_reasoning_can_disable">可以关闭思考</string>

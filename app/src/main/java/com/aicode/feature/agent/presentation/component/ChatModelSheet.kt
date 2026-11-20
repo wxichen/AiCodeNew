@@ -239,7 +239,7 @@ internal fun ReasoningEffortSelector(
                         )
                         Spacer(Modifier.width(Spacing.md))
                         Text(
-                            text = e.withApiLabel(),
+                            text = e.displayLabel(),
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f),
@@ -290,7 +290,7 @@ private fun ReasoningHintLines(plan: ReasoningPlan, capability: ReasoningCapabil
             ReasoningHint(stringResource(R.string.chat_reasoning_endpoint_weak))
         ReasoningPlan.Reason.CLAMPED_DOWN, ReasoningPlan.Reason.CLAMPED_UP ->
             plan.effectiveLevel?.let {
-                ReasoningHint(stringResource(R.string.chat_reasoning_effective, it.withApiLabel()))
+                ReasoningHint(stringResource(R.string.chat_reasoning_effective, it.displayLabel()))
             }
         else -> Unit
     }
@@ -306,10 +306,9 @@ private fun ReasoningHint(text: String) {
     )
 }
 
-/** 档位显示名：中文 + 对应接口值，便于对照模型文档与报错文案（如「最高（max）」）。 */
+/** 档位显示名：只显示中文，不再附带接口值等英文标注。 */
 @Composable
-private fun ReasoningEffort.withApiLabel(): String =
-    stringResource(R.string.common_label_with_api, stringResource(labelRes()), apiValue)
+private fun ReasoningEffort.displayLabel(): String = stringResource(labelRes())
 
 private fun ReasoningEffort.labelRes(): Int = when (this) {
     ReasoningEffort.NONE -> com.aicode.R.string.chat_reasoning_effort_none

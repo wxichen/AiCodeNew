@@ -1464,10 +1464,9 @@ private val EDITABLE_REASONING_LEVELS = listOf(
     ReasoningEffort.MAX
 )
 
-/** 档位显示名：中文 + 对应接口值（如「最高（max）」）。 */
+/** 档位显示名：只显示中文，不再附带接口值等英文标注。 */
 @Composable
-private fun ReasoningEffort.reasoningLabel(): String =
-    stringResource(R.string.common_label_with_api, stringResource(reasoningLabelRes()), apiValue)
+private fun ReasoningEffort.reasoningLabel(): String = stringResource(reasoningLabelRes())
 
 private fun ReasoningEffort.reasoningLabelRes(): Int = when (this) {
     ReasoningEffort.NONE -> R.string.chat_reasoning_effort_none

@@ -22,7 +22,6 @@ import com.aicode.feature.agent.domain.mcp.McpManager
 import com.aicode.feature.plugin.runtime.PluginHookDispatcher
 import com.aicode.feature.plugin.runtime.PluginToolManager
 import com.aicode.feature.settings.data.repository.KeepaliveSettingsRepository
-import com.aicode.feature.settings.data.repository.LanguageSettingsRepository
 import com.aicode.feature.settings.data.repository.LogSettingsRepository
 import com.aicode.feature.settings.data.remote.ModelMetadataService
 import com.aicode.feature.terminal.domain.KeepaliveWorker
@@ -49,8 +48,6 @@ class AIEditorApp : Application(), Configuration.Provider {
 
     companion object {
         const val TAG = "AIEditorApp"
-        const val LANG_PREFS = "language_prefs_sync"
-        const val LANG_KEY = "language_tag"
         /** 崩溃堆栈经 Intent extra 传递，超出 Binder 上限会抛异常，需截断。 */
         const val MAX_CRASH_STACK_CHARS = 50_000
         private const val CRASH_PREFS = "crash_state"
@@ -140,16 +137,11 @@ class AIEditorApp : Application(), Configuration.Provider {
         // 使 App 侧全部 HTTP 链路（对话、MCP、更新检查等）按需走全局/提供商代理。
         // 用 base 而非下文才定义的局部 context：attachBaseContext 阶段 base 即合法 Context。
         AppProxy.applyGlobal(base)
-        val tag = base.getSharedPreferences(LANG_PREFS, android.content.Context.MODE_PRIVATE)
-            .getString(LANG_KEY, null)
-        val context = if (tag.isNullOrBlank()) {
-            base
-        } else {
-            val config = android.content.res.Configuration(base.resources.configuration)
-            config.setLocale(java.util.Locale.forLanguageTag(tag))
-            base.createConfigurationContext(config)
-        }
-        super.attachBaseContext(context)
+        // 界面语言固定中文：早期版本允许切英文并把它存在 SharedPreferences，残留值会让系统语言为英文时
+        // 加载英文资源（英文资源已移除）。这里直接忽略该偏好，统一按中文创建 Context。
+        val config = android.content.res.Configuration(base.resources.configuration)
+        config.setLocale(java.util.Locale.SIMPLIFIED_CHINESE)
+        super.attachBaseContext(base.createConfigurationContext(config))
     }
 
     /** Hilt 字段注入：在 [onCreate] 的 super 调用后即可用。 */
@@ -208,10 +200,6 @@ class AIEditorApp : Application(), Configuration.Provider {
     /** 执行模式仓库（本地 PRoot / 远程 SSH）。 */
     @Inject
     lateinit var executionModeRepository: com.aicode.feature.settings.data.repository.ExecutionModeRepository
-
-    /** 应用语言偏好仓库：持久化用户选择的语言，供 attachBaseContext 同步读取。 */
-    @Inject
-    lateinit var languageSettings: LanguageSettingsRepository
 
     /** 执行模式同步缓存：启动时从 DataStore 读首帧注入 DI。 */
     @Inject
