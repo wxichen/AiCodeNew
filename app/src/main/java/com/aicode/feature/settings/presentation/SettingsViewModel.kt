@@ -598,6 +598,9 @@ class SettingsViewModel @Inject constructor(
     private val _autoExpandReasoning = MutableStateFlow(true)
     val autoExpandReasoning: StateFlow<Boolean> = _autoExpandReasoning.asStateFlow()
 
+    private val _confirmBeforeExit = MutableStateFlow(true)
+    val confirmBeforeExit: StateFlow<Boolean> = _confirmBeforeExit.asStateFlow()
+
     private val _compactionThresholdPercent = MutableStateFlow(85)
     val compactionThresholdPercent: StateFlow<Int> = _compactionThresholdPercent.asStateFlow()
 
@@ -1011,6 +1014,12 @@ class SettingsViewModel @Inject constructor(
             launch {
                 generalSettingsRepository.autoExpandReasoningFlow.collectLatest {
                     _autoExpandReasoning.value = it
+                }
+            }
+
+            launch {
+                generalSettingsRepository.confirmBeforeExitFlow.collectLatest {
+                    _confirmBeforeExit.value = it
                 }
             }
 
@@ -2193,6 +2202,13 @@ class SettingsViewModel @Inject constructor(
     fun setAutoExpandReasoning(enabled: Boolean) {
         viewModelScope.launch {
             generalSettingsRepository.setAutoExpandReasoning(enabled)
+        }
+    }
+
+    /** 退出 App 前是否弹二次确认。 */
+    fun setConfirmBeforeExit(enabled: Boolean) {
+        viewModelScope.launch {
+            generalSettingsRepository.setConfirmBeforeExit(enabled)
         }
     }
 

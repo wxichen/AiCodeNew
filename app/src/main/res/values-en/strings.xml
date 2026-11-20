@@ -107,6 +107,9 @@
     <string name="settings_general_input">Input</string>
     <string name="settings_enter_to_send">Enter key sends message</string>
     <string name="settings_enter_to_send_desc">When off, Enter inserts a newline and you send with the button</string>
+    <string name="settings_general_exit">Exit</string>
+    <string name="settings_confirm_before_exit">Confirm before exiting</string>
+    <string name="settings_confirm_before_exit_desc">Ask for confirmation when leaving with the back gesture, so a stray swipe doesn\'t stop a running task</string>
     <string name="settings_compaction_threshold">Auto-compaction threshold</string>
     <string name="settings_compaction_threshold_desc">Compact context once it reaches this share of the window</string>
     <string name="settings_percent_value">%1$d%%</string>
@@ -406,6 +409,10 @@
     <string name="common_create">Create</string>
     <string name="common_delete">Delete</string>
     <string name="common_cancel">Cancel</string>
+    <string name="exit_confirm_title">Exit the app?</string>
+    <string name="exit_confirm_message">The app goes to the background; terminals and tasks may be reclaimed by the system.</string>
+    <string name="exit_confirm_message_running">A task is still running and will be interrupted if you exit. Exit anyway?</string>
+    <string name="exit_confirm_action">Exit</string>
     <string name="common_retry">Retry</string>
     <string name="common_confirm">Confirm</string>
     <string name="common_go_to_settings">Go to Settings</string>

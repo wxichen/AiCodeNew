@@ -107,6 +107,9 @@
     <string name="settings_general_input">输入</string>
     <string name="settings_enter_to_send">回车键发送消息</string>
     <string name="settings_enter_to_send_desc">关闭后回车换行，需点发送按钮发送</string>
+    <string name="settings_general_exit">退出</string>
+    <string name="settings_confirm_before_exit">退出前二次确认</string>
+    <string name="settings_confirm_before_exit_desc">返回键退出 App 时先弹确认，避免误触中断正在进行的任务</string>
     <string name="settings_compaction_threshold">自动压缩阈值</string>
     <string name="settings_compaction_threshold_desc">上下文占用达到窗口的该比例时自动压缩</string>
     <string name="settings_percent_value">%1$d%%</string>
@@ -406,6 +409,10 @@
     <string name="common_create">创建</string>
     <string name="common_delete">删除</string>
     <string name="common_cancel">取消</string>
+    <string name="exit_confirm_title">退出 App？</string>
+    <string name="exit_confirm_message">退出后 App 会进入后台，终端与任务在后台可能被系统回收。</string>
+    <string name="exit_confirm_message_running">当前有任务正在运行，退出会中断它。确定要退出吗？</string>
+    <string name="exit_confirm_action">退出</string>
     <string name="common_retry">重试</string>
     <string name="common_confirm">确定</string>
     <string name="common_go_to_settings">去设置</string>

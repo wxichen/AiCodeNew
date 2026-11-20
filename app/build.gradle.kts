@@ -46,12 +46,19 @@ fun gitVersionName(): String = try {
             version
         }
     } else if (raw.isNotEmpty()) {
-        "1.7.0-dev+$raw"
+        "1.0.0-dev+$raw"
     } else {
-        "1.7.0-dev"
+        "1.0.0-dev"
     }
 } catch (e: Exception) {
-    "1.7.0-dev"
+    "1.0.0-dev"
+}
+
+// AiCode New 的版本线从 1.0.0 起步，不沿用上游 tag（v1.x 属于 AiCode）。
+// 发版时打 v1.0.0 这类 tag 即可覆盖；未打 tag 时统一显示 1.0.0-dev+<hash>。
+fun aiCodeNewVersionName(): String {
+    val name = gitVersionName()
+    return if (name.startsWith("1.13.0")) "1.0.0-dev" else name
 }
 
 // versionCode 从 git 提交数自动生成：随每次提交单调递增，无需手动维护，
@@ -112,7 +119,7 @@ android {
         // 代价：不能上 Google Play。
         targetSdk = 28
         versionCode = gitCommitCount()
-        versionName = gitVersionName()
+        versionName = aiCodeNewVersionName()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

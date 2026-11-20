@@ -281,6 +281,7 @@ fun SettingsScreen(
     val goalMaxTurns by viewModel.goalMaxTurns.collectAsStateWithLifecycle()
     val goalMaxTokens by viewModel.goalMaxTokens.collectAsStateWithLifecycle()
     val deleteExternalWorkspaceSessions by viewModel.deleteExternalWorkspaceSessions.collectAsStateWithLifecycle()
+    val confirmBeforeExit by viewModel.confirmBeforeExit.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val themePresetId by viewModel.themePresetId.collectAsStateWithLifecycle()
     val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsStateWithLifecycle()
@@ -565,6 +566,10 @@ fun SettingsScreen(
     // 有上一层时系统返回键先回上一层；没有则交还给上层导航。
     BackHandler(enabled = parentSection != null) {
         parentSection?.let { section = it }
+    }
+    // 窄窗停在一级列表时，返回键等同于点左上角返回（先在设置内部消化，避免退到首页再触发退出确认）。
+    BackHandler(enabled = parentSection == null && !expanded) {
+        onNavigateBack()
     }
 
     // settingsViewModel 为 Activity 级共享实例，每次进入设置页重新扫描技能，反映磁盘增删改。
@@ -1193,7 +1198,9 @@ fun SettingsScreen(
                     goalMaxTokens = goalMaxTokens,
                     onSetGoalMaxTokens = { viewModel.setGoalMaxTokens(it) },
                     deleteExternalWorkspaceSessions = deleteExternalWorkspaceSessions,
-                    onToggleDeleteExternalWorkspaceSessions = { viewModel.setDeleteExternalWorkspaceSessions(it) }
+                    onToggleDeleteExternalWorkspaceSessions = { viewModel.setDeleteExternalWorkspaceSessions(it) },
+                    confirmBeforeExit = confirmBeforeExit,
+                    onToggleConfirmBeforeExit = { viewModel.setConfirmBeforeExit(it) }
                 )
                 SettingsSection.Providers -> ProvidersSection(
                     providers = providers,

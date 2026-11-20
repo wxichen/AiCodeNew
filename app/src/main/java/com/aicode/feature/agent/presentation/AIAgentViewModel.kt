@@ -311,6 +311,11 @@ class AIAgentViewModel @Inject constructor(
 
     val agentStates: StateFlow<Map<String, AgentUIState>> = agentRunManager.agentStates
 
+    /** 是否有会话正在运行（会话或斜杠命令），供退出二次确认判断任务是否会被中断。 */
+    val hasActiveRuns: StateFlow<Boolean> = agentRunManager.activeSessions
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     val completedSessions: StateFlow<Set<String>> = agentRunManager.completedSessions
 
     val subAgentCards: StateFlow<Map<String, SubAgentCardState>> = agentRunManager.subAgentCards

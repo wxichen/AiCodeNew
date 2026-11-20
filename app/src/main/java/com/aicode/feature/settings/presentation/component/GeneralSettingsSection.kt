@@ -67,7 +67,9 @@ internal fun GeneralSettingsSection(
     goalMaxTokens: Int,
     onSetGoalMaxTokens: (Int) -> Unit,
     deleteExternalWorkspaceSessions: Boolean,
-    onToggleDeleteExternalWorkspaceSessions: (Boolean) -> Unit
+    onToggleDeleteExternalWorkspaceSessions: (Boolean) -> Unit,
+    confirmBeforeExit: Boolean,
+    onToggleConfirmBeforeExit: (Boolean) -> Unit
 ) {
     var showStartupSessionSheet by remember { mutableStateOf(false) }
     var editingFirstByteTimeout by remember { mutableStateOf(false) }
@@ -168,6 +170,21 @@ internal fun GeneralSettingsSection(
                     AppSwitch(
                         checked = enterToSend,
                         onCheckedChange = onToggleEnterToSend
+                    )
+                }
+            )
+        }
+
+        SettingsGroupHeader(text = stringResource(R.string.settings_general_exit))
+        SettingsGroup {
+            SettingsRow(
+                icon = null,
+                title = stringResource(R.string.settings_confirm_before_exit),
+                subtitle = stringResource(R.string.settings_confirm_before_exit_desc),
+                trailing = {
+                    AppSwitch(
+                        checked = confirmBeforeExit,
+                        onCheckedChange = onToggleConfirmBeforeExit
                     )
                 }
             )

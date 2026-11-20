@@ -42,6 +42,8 @@ data class BackupSnapshot(
     val compactionThresholdPercent: Int = 90,
     val sendFileMaxSizeMb: Int = 100,
     val deleteExternalWorkspaceSessions: Boolean = false,
+    // 默认 false：旧备份没有该字段时，导入不应把用户显式关掉的开关重新打开。
+    val confirmBeforeExit: Boolean = false,
     val logLevel: String? = null,
     val visionProviderId: String = "",
     val visionModel: String = "",
@@ -81,6 +83,8 @@ data class BackupMetadata(
     val compactionThresholdPercent: Int = 90,
     val sendFileMaxSizeMb: Int = 100,
     val deleteExternalWorkspaceSessions: Boolean = false,
+    // 默认 false：旧备份没有该字段时，导入不应把用户显式关掉的开关重新打开。
+    val confirmBeforeExit: Boolean = false,
     val logLevel: String? = null,
     val visionProviderId: String = "",
     val visionModel: String = "",
@@ -124,6 +128,7 @@ fun BackupSnapshot.toMetadata() = BackupMetadata(
     compactionThresholdPercent = compactionThresholdPercent,
     sendFileMaxSizeMb = sendFileMaxSizeMb,
     deleteExternalWorkspaceSessions = deleteExternalWorkspaceSessions,
+    confirmBeforeExit = confirmBeforeExit,
     logLevel = logLevel,
     visionProviderId = visionProviderId,
     visionModel = visionModel,

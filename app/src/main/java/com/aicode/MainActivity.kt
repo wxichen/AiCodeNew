@@ -462,6 +462,32 @@ fun AppNavigation(
         scope.launch { rightDrawerState.close() }
     }
 
+    // 退出二次确认：返回键弹出确认框，避免误触侧边手势直接退出、把正在跑的任务打断。
+    // 偏好设置里关掉时不再拦截返回键，恢复系统默认退出行为。
+    val confirmBeforeExit by settingsViewModel.confirmBeforeExit.collectAsStateWithLifecycle()
+    val hasActiveRuns by agentViewModel.hasActiveRuns.collectAsStateWithLifecycle()
+    var exitConfirmRequested by remember { mutableStateOf(false) }
+    BackHandler(enabled = confirmBeforeExit) {
+        // 首页停在其他页面时返回键先回聊天页（与系统默认一致），只有已在首页才弹退出确认。
+        if (currentRoute != null && currentRoute != "chat") {
+            navController.popBackStack()
+        } else {
+            exitConfirmRequested = true
+        }
+    }
+    if (exitConfirmRequested) {
+        val exitActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+        ExitConfirmDialog(
+            hasActiveRuns = hasActiveRuns,
+            onDismiss = { exitConfirmRequested = false },
+            onConfirm = {
+                exitConfirmRequested = false
+                // 进后台而不是 finish：用户从最近任务回来时会话、终端都还在。
+                exitActivity?.moveTaskToBack(true)
+            }
+        )
+    }
+
     // 侧边栏需要的数据。
     val currentWorkspace by workspaceViewModel.current.collectAsStateWithLifecycle()
     androidx.compose.runtime.LaunchedEffect(currentWorkspace) {
@@ -1388,6 +1414,40 @@ fun AppNavigation(
     }
     }
     }
+}
+
+/**
+ * 退出二次确认。任务运行中额外提示「退出会中断当前任务」，让用户知道代价后再决定。
+ */
+@Composable
+private fun ExitConfirmDialog(
+    hasActiveRuns: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text(stringResource(R.string.exit_confirm_title)) },
+        text = {
+            Text(
+                stringResource(
+                    if (hasActiveRuns) R.string.exit_confirm_message_running
+                    else R.string.exit_confirm_message
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.exit_confirm_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        }
+    )
 }
 
 /** 侧边栏文件页写操作失败提示（新建 / 重命名 / 删除共用）。 */

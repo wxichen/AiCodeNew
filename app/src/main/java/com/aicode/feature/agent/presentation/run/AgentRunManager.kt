@@ -216,6 +216,10 @@ class AgentRunManager @Inject constructor(
     private val _runningCommandSessions = MutableStateFlow<Set<String>>(emptySet())
     val runningCommandSessions: StateFlow<Set<String>> = _runningCommandSessions.asStateFlow()
 
+    /** 正在运行的会话集合（含停止命令仍卡住的会话），用于回退、退出确认等 UI 判断。 */
+    private val _activeSessions = MutableStateFlow<Set<String>>(emptySet())
+    val activeSessions: StateFlow<Set<String>> = _activeSessions.asStateFlow()
+
     /** UI 请求（切换会话/写草稿/删除会话）：运行器不持有 UI 状态，转发给聊天页处理。 */
     private val _uiRequests = MutableSharedFlow<AgentChatRequest>(extraBufferCapacity = 32)
     val uiRequests: SharedFlow<AgentChatRequest> = _uiRequests.asSharedFlow()
@@ -223,6 +227,10 @@ class AgentRunManager @Inject constructor(
     fun started(sessionId: String) = agentRunStateStore.started(sessionId)
 
     fun isSessionRunning(sessionId: String): Boolean = sessionJobs[sessionId]?.isActive == true
+
+    private fun publishActiveSessions() {
+        _activeSessions.value = sessionJobs.filterValues { it.isActive }.keys + _runningCommandSessions.value
+    }
 
     fun hasActiveSessions(sessionIds: Collection<String>): Boolean =
         sessionIds.any { sessionJobs[it]?.isActive == true }
@@ -651,6 +659,7 @@ class AgentRunManager @Inject constructor(
     /** 命令执行结束后的接续（斜杠命令在聊天页执行，结束后通知运行器消费队列）。 */
     fun onCommandFinished(sessionId: String) {
         _runningCommandSessions.value = _runningCommandSessions.value - sessionId
+        publishActiveSessions()
         streamingAssistantStore.setCommandRunning(sessionId, false)
         flushPendingNotifications(sessionId)
         processNextInQueue(sessionId)
@@ -659,6 +668,7 @@ class AgentRunManager @Inject constructor(
     fun markCommandStarted(sessionId: String) {
         streamingAssistantStore.setCommandRunning(sessionId, true)
         _runningCommandSessions.value = _runningCommandSessions.value + sessionId
+        publishActiveSessions()
     }
 
     /** 回滚前停止会话任务并清空运行态（队列、运行中工具、流式内容、压缩与重试提示）。 */
@@ -843,6 +853,7 @@ class AgentRunManager @Inject constructor(
         jobs.forEach { it.cancel() }
         sessionJobs.clear()
         _runningCommandSessions.value = emptySet()
+        publishActiveSessions()
         _agentStates.value = _agentStates.value.mapValues { AgentUIState.Idle }
         streamingAssistantStore.clearAll()
         _runningTools.value = emptyMap()
@@ -1126,7 +1137,10 @@ class AgentRunManager @Inject constructor(
         if (request.startsWith("/")) {
             return@launch
         }
-        coroutineContext[Job]?.let { sessionJobs[sessionId] = it }
+        coroutineContext[Job]?.let {
+            sessionJobs[sessionId] = it
+            publishActiveSessions()
+        }
         val currentSession = sessionUseCase.getSessionById(sessionId)
         if (currentSession != null && (currentSession.providerId.isNullOrBlank() || currentSession.model.isNullOrBlank())) {
             val defaultProviderId = defaultModelSettingsRepository.getDefaultProviderId().takeIf { it.isNotBlank() }
@@ -1554,6 +1568,7 @@ class AgentRunManager @Inject constructor(
             if (isSubSession) subAgentEventBus.release(sessionId)
             if (isOwnJob) {
                 sessionJobs.remove(sessionId)
+                publishActiveSessions()
                 streamingAssistantStore.finishRun(sessionId, runToken, System.currentTimeMillis())
             }
             _runningTools.value = _runningTools.value - sessionId
@@ -1595,6 +1610,7 @@ class AgentRunManager @Inject constructor(
     }.also { job ->
         if (targetSessionId != null) {
             sessionJobs[targetSessionId] = job
+            publishActiveSessions()
             job.invokeOnCompletion { streamingAssistantStore.finishRun(targetSessionId, runToken) }
         }
     }

@@ -31,11 +31,12 @@ enum class StartupSessionMode {
 /**
  * 「偏好设置」里的用户偏好。
  *
- * 目前九项：拉取模型成功后是否自动移除远端已不存在的本地模型（默认开启）、
+ * 目前十项：拉取模型成功后是否自动移除远端已不存在的本地模型（默认开启）、
  * 启动时进入新会话还是最近会话（默认新开会话）、首字 / 数据块间隔超时（秒）、
  * 网络请求的最大重试次数（默认 6）、回车发送、思考卡片是否默认展开（默认开启）、
- * 自动压缩阈值、sendFile 单个文件大小上限（默认 100MB），
- * 以及移除外部本地工作区时是否一并删除其聊天记录（默认关闭）。
+ * 自动压缩阈值、sendFile 单个文件大小上限（默认 100MB）、
+ * 移除外部本地工作区时是否一并删除其聊天记录（默认关闭），
+ * 以及退出 App 前是否弹二次确认（默认开启）。
  * DataStore 用法与 [KeepaliveSettingsRepository] 一致。
  */
 @Singleton
@@ -55,6 +56,8 @@ class GeneralSettingsRepository @Inject constructor(
         val GOAL_MAX_TURNS_KEY = intPreferencesKey("goal_max_turns")
         val GOAL_MAX_TOKENS_KEY = intPreferencesKey("goal_max_tokens")
         val DELETE_EXTERNAL_WORKSPACE_SESSIONS_KEY = booleanPreferencesKey("delete_external_workspace_sessions")
+        /** 退出 App 前是否弹二次确认（默认开启）。 */
+        val CONFIRM_BEFORE_EXIT_KEY = booleanPreferencesKey("confirm_before_exit")
         /** 「提示词」页使用说明公告已展示内容的哈希；无值或与当前内容哈希不一致时重新弹出。 */
         val PROMPTS_ANNOUNCEMENT_SHOWN_HASH_KEY = stringPreferencesKey("prompts_announcement_shown_hash")
 
@@ -258,6 +261,14 @@ class GeneralSettingsRepository @Inject constructor(
     /** 移除外部工作区前读取一次该偏好。 */
     suspend fun deleteExternalWorkspaceSessions(): Boolean = deleteExternalWorkspaceSessionsFlow.first()
 
+    /** 退出 App 前二次确认开关；默认开启。 */
+    val confirmBeforeExitFlow: Flow<Boolean> =
+        context.generalDataStore.data.map { it[CONFIRM_BEFORE_EXIT_KEY] ?: true }
+
+    suspend fun setConfirmBeforeExit(enabled: Boolean) {
+        context.generalDataStore.edit { it[CONFIRM_BEFORE_EXIT_KEY] = enabled }
+    }
+
     /** 「提示词」页公告已展示内容的哈希；无值表示从未展示过。 */
     val promptsAnnouncementShownHashFlow: Flow<String?> = context.generalDataStore.data.map { prefs ->
         prefs[PROMPTS_ANNOUNCEMENT_SHOWN_HASH_KEY]
@@ -271,4 +282,9 @@ class GeneralSettingsRepository @Inject constructor(
     suspend fun deleteExternalWorkspaceSessionsSnapshot(): Boolean = deleteExternalWorkspaceSessionsFlow.first()
 
     suspend fun restoreDeleteExternalWorkspaceSessions(enabled: Boolean) = setDeleteExternalWorkspaceSessions(enabled)
+
+    /** 备份快照：退出二次确认开关。 */
+    suspend fun confirmBeforeExitSnapshot(): Boolean = confirmBeforeExitFlow.first()
+
+    suspend fun restoreConfirmBeforeExit(enabled: Boolean) = setConfirmBeforeExit(enabled)
 }
