@@ -539,6 +539,7 @@
     <string name="about_license">Open Source License</string>
     <string name="about_description">Universal AI Coding Agent for Android · Linux dev environment · Local &amp; remote SSH</string>
     <string name="about_check_update">Check for updates</string>
+    <string name="update_check_no_source">AiCode New hasn\'t published any release yet, so update checks are unavailable</string>
     <string name="about_checking_update">Querying GitHub for the latest version…</string>
     <string name="about_up_to_date">Already up to date</string>
     <string name="about_up_to_date_detail">Current version v%1$s, already the latest Release on GitHub.</string>

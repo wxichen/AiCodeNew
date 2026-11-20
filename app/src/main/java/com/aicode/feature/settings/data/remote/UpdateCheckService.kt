@@ -60,11 +60,15 @@ sealed interface UpdateCheckResult {
 class UpdateCheckService @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
-    suspend fun checkForUpdate(currentVersion: String, channel: UpdateChannel): UpdateCheckResult =
-        withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(currentVersion: String, channel: UpdateChannel): UpdateCheckResult {
+        // AiCode New 还没有自己的 Release 源：指向上游仓库会把它当成新版本、
+        // 下载到包名不符的安装包。这里直接报错，等有了自己的仓库再填 URL。
+        val releasesApi = GITHUB_RELEASES_API
+            ?: return UpdateCheckResult.Error(context.getString(R.string.update_check_no_source))
+        return withContext(Dispatchers.IO) {
             runCatching {
                 val req = okhttp3.Request.Builder()
-                    .url("$GITHUB_RELEASES_API?per_page=50")
+                    .url("$releasesApi?per_page=50")
                     .header("Accept", "application/vnd.github+json")
                     .build()
                 SHARED_CLIENT.newCall(req).execute().use { resp ->
@@ -109,6 +113,7 @@ class UpdateCheckService @Inject constructor(
                 }
             }.getOrElse { UpdateCheckResult.Error(it.message ?: context.getString(R.string.about_network_error)) }
         }
+    }
 
     private fun toVersionUpdate(release: ReleaseInfo): VersionUpdate {
         val notes = release.notes.trim()
@@ -162,7 +167,8 @@ class UpdateCheckService @Inject constructor(
         } ?: emptyList()
 
     private companion object {
-        const val GITHUB_RELEASES_API = "https://api.github.com/repos/jieapi/aicode/releases"
+        /** AiCode New 自己的 Release 仓库 API；未配置时检查更新直接返回不可用。 */
+        private val GITHUB_RELEASES_API: String? = null
         const val SHA256_PREFIX = "sha256:"
         val SHARED_CLIENT by lazy {
             okhttp3.OkHttpClient.Builder()
