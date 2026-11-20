@@ -55,10 +55,14 @@ fun gitVersionName(): String = try {
 }
 
 // AiCode New 的版本线从 1.0.0 起步，不沿用上游 tag（v1.x 属于 AiCode）。
-// 发版时打 v1.0.0 这类 tag 即可覆盖；未打 tag 时统一显示 1.0.0-dev+<hash>。
+// 发了 v1.0.x 自己的 tag 就用 tag；否则按提交数递增 patch，显示 1.0.<n>-dev。
 fun aiCodeNewVersionName(): String {
     val name = gitVersionName()
-    return if (name.startsWith("1.13.0")) "1.0.0-dev" else name
+    if (name.startsWith("1.13.0")) return "1.0.0-dev"
+    val ownTag = Regex("""^1\.0\.(\d+)""").find(name)
+    if (ownTag != null) return name
+    // 未打自有 tag：用提交数派生 patch 号，保证每次构建版本号递增、可比较。
+    return "1.0.${gitCommitCount()}-dev"
 }
 
 // versionCode 从 git 提交数自动生成：随每次提交单调递增，无需手动维护，
