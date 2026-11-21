@@ -62,6 +62,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import compose.icons.feathericons.Maximize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
+
 
 /** 一次 HTML 预览请求。只带渲染所需的最小信息，不持有文件内容。 */
 @Immutable
@@ -105,6 +109,22 @@ class HtmlPreviewState : HtmlPreview {
 
 @Composable
 fun rememberHtmlPreviewState(): HtmlPreviewState = remember { HtmlPreviewState() }
+
+/**
+ * 量出页面内容高度（px）并回调。
+ *
+ * 同时取 documentElement 与 body 的 scrollHeight 较大者：body 在有绝对定位子元素或
+ * margin 折叠时会比实际内容矮，只量它会把页面底部裁掉。
+ */
+private fun measurePageHeight(view: WebView, onHeight: (Int) -> Unit) {
+    val js = "(function(){return Math.max(" +
+        "document.documentElement?document.documentElement.scrollHeight:0," +
+        "document.body?document.body.scrollHeight:0);})();"
+    view.evaluateJavascript(js) { raw ->
+        val px = raw?.trim()?.trim('"')?.toFloatOrNull()?.toInt() ?: return@evaluateJavascript
+        if (px > 0) onHeight(px)
+    }
+}
 
 /**
  * 会话内的网页预览：只显示**首屏**，点一下进全屏看整页。
@@ -151,6 +171,14 @@ internal fun InlineHtmlPreview(
 
     val cacheKey = request.containerPath
 
+    /**
+     * 页面内容高度（px）。拿到后 WebView 就按这个高度铺开，自身不再滚动，
+     * 竖向手势交给外层 Compose 的 verticalScroll —— 这是唯一能在会话里顺畅滚动的做法：
+     * Compose 的滚动容器（工具输出卡片就是）能与 LazyColumn 走 nested scroll 协商，
+     * 而原生 WebView 不参与这套协议。
+     */
+    var contentHeightPx by remember(cacheKey) { mutableStateOf(0) }
+
     val webView = remember(cacheKey) {
         InlineHtmlPreviewCache.take(cacheKey)
             ?: WebView(ContextThemeWrapper(context, webViewThemeRes(dark))).apply {
@@ -173,6 +201,9 @@ internal fun InlineHtmlPreview(
                     override fun onPageFinished(view: WebView, finishedUrl: String?) {
                         loading = false
                         finishedUrl?.let { InlineHtmlPreviewCache.markLoaded(cacheKey, it) }
+                        // 页面刚加载完时布局可能还没稳定，连量两次：第一次常拿到首屏高度。
+                        measurePageHeight(view) { contentHeightPx = it }
+                        view.postDelayed({ measurePageHeight(view) { contentHeightPx = it } }, 250)
                     }
 
                     // 与全屏预览同一套规则：工作区内链接就地导航，站外链接交给系统浏览器。
@@ -247,20 +278,50 @@ internal fun InlineHtmlPreview(
                     .clickable { fullscreen.show(request) }
             )
         }
-        // 画面区不做点击接管：WebView 正常接收触摸（与最初能用的版本一致），
-        // 进全屏走顶栏那个 Maximize 图标。之前试过 isEnabled=false + 透明点击层，
-        // 反而把整条触摸链打断了，点了没反应。
+        // 滚动结构：外层是 Compose 的 verticalScroll（固定视口），内层 WebView 高 = 页面内容高。
+        // 这样竖向手势完全走 Compose 的 nested scroll 协议，与「工具输出卡片」同一套机制，
+        // 能与外层 LazyColumn 正常协商（原生 WebView 自己滚是不参与这套协议的）。
+        val scrollState = rememberScrollState()
+        val density = LocalDensity.current
+        val pageHeight = if (contentHeightPx > 0) {
+            with(density) { contentHeightPx.toDp() }
+        } else {
+            INLINE_PREVIEW_HEIGHT
+        }
+        // 内容没超过视口时按视口高度铺满（避免底部留白），超过则按内容高度、由外层滚动。
+        val innerHeight = maxOf(pageHeight, INLINE_PREVIEW_HEIGHT)
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(INLINE_PREVIEW_HEIGHT)
                 .background(Color(bgColor))
         ) {
-            AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
+            Column(
+                // 只用默认的 verticalScroll：它与外层 LazyColumn 的标准 nested scroll
+                // 协商（内层先滚、到边界后把剩余量交给列表）本来就能工作。
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
+                AndroidView(
+                    factory = { webView },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(innerHeight)
+                )
+            }
             if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
+            }
+            // 顶栏图标负责进全屏；画面区本身接收滚动。
+            // 注意：滚动手势由外层 verticalScroll 承担，所以 WebView 不能再抢——
+            // 关掉它的触摸，否则手指落在页面上时会被 WebView 吃掉、外层滚不动。
+            LaunchedEffect(webView) {
+                webView.isEnabled = false
+                webView.setOnTouchListener { _, _ -> true }
             }
         }
     }
