@@ -649,18 +649,6 @@ class RemoteSshConnection @Inject constructor(
         withContext(Dispatchers.IO) {
             runCatching {
                 sftpOperationMutex.withLock { sftp().mkdirs(credDir) }
-                // 清掉旧版的共享文件：它们曾是所有客户端共用的路径，现在由各自的目录接管。
-                // 不清理的话，服务器上会留一份谁都不再维护的凭据副本。
-                sftpOperationMutex.withLock {
-                    val sftp = sftp()
-                    LEGACY_SHARED_FILES.forEach { name ->
-                        val legacy = "$aicodeDir/$name"
-                        if (sftp.statExistence(legacy) != null) {
-                            runCatching { sftp.rm(legacy) }
-                                .onFailure { FileLogger.w(TAG, "清理旧共享凭据文件失败: $legacy", it) }
-                        }
-                    }
-                }
 
                 val creds = credentials.joinToString("\n") { c ->
                     "https://${enc(c.username)}:${enc(c.token)}@${c.host}"
@@ -748,13 +736,6 @@ class RemoteSshConnection @Inject constructor(
 
     private fun enc(part: String): String = java.net.URLEncoder.encode(part, "UTF-8")
 
-    private companion object {
-        /**
-         * 旧版写在 `~/.aicode/` 根下的共享凭据文件。
-         * 引入按客户端隔离目录后，这些文件由各自的 `clients/<包名>/` 取代。
-         */
-        val LEGACY_SHARED_FILES = listOf("gitconfig.credential", "git-credentials", "git-credential-aicode")
-    }
 
     /** 与 app 侧一致的编码：base64 后整体反转（属混淆，非加密）。 */
     private fun encodeCreds(plain: String): String =
