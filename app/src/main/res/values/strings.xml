@@ -564,6 +564,12 @@
     <string name="chat_open_apk_permission">安装应用需要授权，请在跳转的设置中允许来自此来源的应用</string>
     <string name="chat_attachment_preview">预览 %1$s</string>
     <string name="chat_attachment_open">打开 %1$s</string>
+    <string name="chat_html_preview">预览</string>
+    <string name="chat_html_preview_close">关闭预览</string>
+    <string name="chat_video_play">播放</string>
+    <string name="chat_video_pause">暂停</string>
+    <string name="chat_video_unavailable">视频文件已不可用，点击用其它应用打开</string>
+    <string name="chat_video_play_failed">视频无法播放</string>
     <string name="chat_no_model_selected">未选择模型</string>
     <string name="chat_open_git">打开 Git</string>
     <string name="chat_open_terminal">打开终端</string>
@@ -879,6 +885,7 @@
     <string name="editor_dont_save">不保存</string>
     <string name="editor_md_preview">预览 Markdown</string>
     <string name="editor_md_show_source">显示源码</string>
+    <string name="editor_html_preview">预览网页</string>
     <string name="editor_indent">缩进</string>
     <string name="editor_cursor_left">光标左移</string>
     <string name="editor_cursor_right">光标右移</string>
@@ -914,6 +921,7 @@
     <string name="chat_queue_drag">拖拽排序</string>
     <string name="chat_upload_file">上传文件</string>
     <string name="chat_upload_image">上传图片</string>
+    <string name="chat_upload_video">上传视频</string>
     <string name="chat_remove_attachment">移除附件</string>    <string name="chat_no_models_hint">暂无可用模型，请在「AI 供应商」中添加</string>
     <string name="chat_stop">停止</string>
     <string name="chat_send">发送</string>

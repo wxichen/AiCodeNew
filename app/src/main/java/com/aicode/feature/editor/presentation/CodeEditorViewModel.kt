@@ -69,6 +69,9 @@ class CodeEditorViewModel @Inject constructor(
     val settings: StateFlow<EditorSettings> = editorSettings.settingsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EditorSettings())
 
+    /** HTML 预览需要按容器路径读同目录资源（css/js/图片），复用编辑器自己的文件访问后端。 */
+    val htmlPreviewFileAccess: FileAccessProvider get() = fileAccess
+
     private var loadedPath: String? = null
 
     /** 加载时磁盘内容的指纹，用于保存前判断「文件是否被 AI/其他会话改过」。 */

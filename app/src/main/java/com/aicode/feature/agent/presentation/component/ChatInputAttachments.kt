@@ -77,6 +77,7 @@ import compose.icons.feathericons.Edit2
 import compose.icons.feathericons.FileText
 import compose.icons.feathericons.Image
 import compose.icons.feathericons.Menu
+import compose.icons.feathericons.Video
 import compose.icons.feathericons.X
 import compose.icons.feathericons.Zap
 import java.util.Base64
@@ -459,6 +460,7 @@ internal fun AttachmentSheet(
     canUploadImages: Boolean,
     onUploadFile: () -> Unit,
     onUploadImage: () -> Unit,
+    onUploadVideo: () -> Unit,
     onTakePhoto: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -492,6 +494,12 @@ internal fun AttachmentSheet(
                 title = stringResource(com.aicode.R.string.chat_upload_image),
                 enabled = canUploadImages,
                 onClick = onUploadImage
+            )
+            AttachmentSheetItem(
+                icon = FeatherIcons.Video,
+                title = stringResource(com.aicode.R.string.chat_upload_video),
+                enabled = canUploadFiles,
+                onClick = onUploadVideo
             )
             AttachmentSheetItem(
                 icon = FeatherIcons.Camera,

@@ -91,6 +91,9 @@ import com.aicode.feature.agent.presentation.MessageRole
 import com.aicode.feature.agent.presentation.QueuedRequest
 import com.aicode.feature.agent.presentation.StreamingAssistantMessage
 import com.aicode.feature.agent.presentation.hasVisibleContent
+import com.aicode.feature.agent.presentation.component.HtmlPreviewHost
+import com.aicode.feature.agent.presentation.component.LocalHtmlPreview
+import com.aicode.feature.agent.presentation.component.rememberHtmlPreviewState
 import com.aicode.feature.onboarding.domain.OnboardingStep
 import com.aicode.feature.onboarding.presentation.onboardingTarget
 import com.aicode.feature.plugin.domain.PluginUiEntry
@@ -1143,6 +1146,10 @@ fun AIChatPanel(
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
         handlePickedAttachments(uris, images = true)
     }
+    // 视频按普通文件上传（不读 base64）：是否视频由扩展名/mime 判定，不需要为它单独走图片通道。
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        handlePickedAttachments(uris, images = false)
+    }
 
     // 拍照：输出到 cache 临时文件（FileProvider 授权 uri），拍完按图片附件处理。
     var cameraPhotoUri by remember { mutableStateOf<Uri?>(null) }
@@ -1497,6 +1504,7 @@ fun AIChatPanel(
         MarkdownImageTransformer(viewModel.fileAccess)
     }
     val imageViewerState = rememberImageViewerState()
+    val htmlPreviewState = rememberHtmlPreviewState()
     val viewerDecodeSpec = rememberViewerDecodeSpec()
     val chatImageLoad = remember(viewModel.fileAccess, viewerDecodeSpec) {
         chatImageLoader(viewModel.fileAccess, viewerDecodeSpec.maxEdge, viewerDecodeSpec.maxPixels)
@@ -1588,6 +1596,7 @@ fun AIChatPanel(
     CompositionLocalProvider(
         LocalMarkdownImageTransformer provides markdownImageTransformer,
         LocalImageViewer provides imageViewerState,
+        LocalHtmlPreview provides htmlPreviewState,
         LocalAttachmentOpener provides attachmentOpener,
         LocalSubAgentCardHost provides SubAgentCardHost(
             states = subAgentCards,
@@ -1878,6 +1887,11 @@ fun AIChatPanel(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                     )
                 },
+                onUploadVideo = {
+                    videoPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                    )
+                },
                 onTakePhoto = ::takePhoto,
                 slashCommands = slashCommands,
                 fileMentionState = fileMentionState,
@@ -2043,6 +2057,8 @@ fun AIChatPanel(
         // Dialog 是独立 window、不占父布局尺寸，挂在 Scaffold 之后即可覆盖整屏 ——
         // 平板双栏下不会只盖住聊天列，也不会被 MainActivity 画在最上层的全局背景水印压住。
         ImageViewerHost(state = imageViewerState, load = chatImageLoad)
+        // HTML 预览同属独立 Dialog：放同一层级，才能盖住整个屏而不是只盖聊天列。
+        HtmlPreviewHost(state = htmlPreviewState, fileAccess = viewModel.fileAccess)
     }
 }
 

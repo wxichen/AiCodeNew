@@ -4,16 +4,23 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image as ComposeImage
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,8 +43,10 @@ import com.aicode.R
 import com.aicode.core.theme.Brand
 import com.aicode.core.theme.Radius
 import com.aicode.core.theme.Spacing
+import com.aicode.core.ui.AttachmentKind
 import com.aicode.core.ui.LocalImageViewer
 import com.aicode.core.ui.ThumbnailCache
+import com.aicode.core.ui.attachmentKindOf
 import com.aicode.core.util.ApkInstaller
 import com.aicode.feature.agent.presentation.AgentAttachment
 import com.aicode.feature.workspace.domain.FileAccessProvider
@@ -49,15 +58,20 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** 附件缩略图边长：一行一个文件时左侧的小图，够看清是截图还是照片即可。 */
+/** 附件缩略图边长：非图片文件行左侧的小图标尺寸。 */
 private val AttachmentThumbSize = 44.dp
 
+/** 图片墙体感：单张时按原比例铺满气泡宽度，上限 260dp 高，太长的长截图也不至于占满整屏。 */
+private val ImageMaxHeight = 260.dp
+
 /**
- * 已发送 / 已生成附件的列表：**一行一个文件**。
+ * 已发送 / 已生成附件的列表。
  *
- * 每行是「左侧缩略图（图片放真缩略图，其余按类型给图标）+ 文件名 + 大小 · 容器路径」，
- * 整行可点。不再用横向滚动的方形卡片带：76dp 的格子里文件名必被截断，多个文件还得左右滑，
- * 一行一个才能一眼看清发的是哪几份。
+ * 按类型分流渲染：
+ * - **图片**：按原比例铺开显示，多张走双列缩略图墙，点任一进全屏查看器；
+ * - **视频**：气泡内直接可播放，不完整的临时文件退化为一行提示卡片；
+ * - **HTML**：一行文件卡片 + 「预览」按钮，点了在应用内全屏渲染页面；
+ * - **其余**：一行一个文件（图标 + 文件名 + 大小 · 容器路径），点击交给调用方。
  *
  * 点击语义：图片一律走内置全屏查看器（隐式依赖组合树上层提供 [LocalImageViewer]，聊天区都满足）；
  * 非图片用调用方给的 [onClick] —— 工具卡片传的是「系统 app 打开」，助手气泡不传即不可点。
@@ -67,24 +81,135 @@ internal fun MessageAttachmentList(
     attachments: List<AgentAttachment>,
     onClick: ((AgentAttachment) -> Unit)? = null
 ) {
+    if (attachments.isEmpty()) return
+    val kinds = remember(attachments) {
+        attachments.map { attachmentKindOf(it.fileName, it.mimeType, it.isImage) }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = Spacing.xs),
-        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        attachments.forEach { attachment ->
-            MessageAttachmentRow(attachment = attachment, onClick = onClick)
+        val images = attachments.filterIndexed { index, _ -> kinds[index] == AttachmentKind.IMAGE }
+        if (images.isNotEmpty()) {
+            MessageImageGrid(images = images)
+        }
+        attachments.forEachIndexed { index, attachment ->
+            when (kinds[index]) {
+                AttachmentKind.IMAGE -> Unit
+                AttachmentKind.VIDEO -> VideoAttachmentCard(attachment = attachment)
+                else -> MessageAttachmentRow(
+                    attachment = attachment,
+                    onClick = onClick,
+                    previewable = kinds[index] == AttachmentKind.HTML
+                )
+            }
         }
     }
+}
+
+/**
+ * 图片墙：一张时按原比例铺满可用宽度，多张时双列缩略图。
+ *
+ * 单图高度上限 [ImageMaxHeight]：长截图（4000×300 这类）按原比例铺满会把气泡拉成一屏多，
+ * 反而看不到上下文；限高后靠点击进全屏查看器看细节。
+ */
+@Composable
+private fun MessageImageGrid(images: List<AgentAttachment>) {
+    if (images.size == 1) {
+        MessageImageTile(
+            attachment = images.first(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = ImageMaxHeight),
+            contentScale = ContentScale.Fit
+        )
+        return
+    }
+    // 双列缩略图：按行分组，最后一行不足两个时左对齐（不拉伸占满）。
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+        images.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                row.forEach { attachment ->
+                    MessageImageTile(
+                        attachment = attachment,
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                // 补齐占位，避免奇数张时最后一张被拉成整行宽
+                repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+/** 单张图片：异步解码原图、按容器宽度自适应，点击进全屏查看器。 */
+@Composable
+private fun MessageImageTile(
+    attachment: AgentAttachment,
+    modifier: Modifier,
+    contentScale: ContentScale
+) {
+    val viewer = LocalImageViewer.current
+    val label = stringResource(R.string.chat_attachment_preview, attachment.fileName)
+    val bitmap by produceState<ImageBitmap?>(initialValue = ThumbnailCache.peek(attachment.localPath), attachment.localPath) {
+        value = ThumbnailCache.peek(attachment.localPath)
+            ?: withContext(Dispatchers.IO) { ThumbnailCache.load(attachment.localPath) }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(Radius.md))
+            .background(chatMutedSurfaceColor())
+            .clickable(onClickLabel = label) { viewer.show(attachment.toViewerRequest()) },
+        contentAlignment = Alignment.Center
+    ) {
+        val image = bitmap
+        if (image != null) {
+            ComposeImage(
+                bitmap = image,
+                contentDescription = label,
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Icon(
+                FeatherIcons.Image,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 视频附件：直接内嵌播放器，可看可播。
+ *
+ * [AgentAttachment.localPath] 在远程模式下是临时副本，进程重启或缓存被清掉后失效；
+ * 失效时播放器自己会退化成一行提示，不在这里预先判断（避免组合阶段做文件 IO）。
+ */
+@Composable
+private fun VideoAttachmentCard(attachment: AgentAttachment) {
+    VideoAttachmentPlayer(
+        localPath = attachment.localPath,
+        fileName = attachment.fileName
+    )
 }
 
 @Composable
 private fun MessageAttachmentRow(
     attachment: AgentAttachment,
-    onClick: ((AgentAttachment) -> Unit)? = null
+    onClick: ((AgentAttachment) -> Unit)? = null,
+    /** HTML 附件多给一个「预览」按钮，与「用系统 App 打开」并存。 */
+    previewable: Boolean = false
 ) {
     val viewer = LocalImageViewer.current
+    val htmlPreview = LocalHtmlPreview.current
     val handler: (() -> Unit)? = if (attachment.isImage) {
         { viewer.show(attachment.toViewerRequest()) }
     } else if (onClick != null) {
@@ -147,7 +272,15 @@ private fun MessageAttachmentRow(
                 )
             }
             // 有动作才给指示箭头：不可点的行不该长得像能点（如助手气泡里的非图片附件）
-            if (handler != null) {
+            if (previewable) {
+                FilledTonalButton(
+                    onClick = { htmlPreview.show(HtmlPreviewRequest(attachment.containerPath, name)) },
+                    contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 0.dp),
+                    modifier = Modifier.height(30.dp)
+                ) {
+                    Text(text = stringResource(R.string.chat_html_preview), style = MaterialTheme.typography.labelSmall)
+                }
+            } else if (handler != null) {
                 Icon(
                     FeatherIcons.ChevronRight,
                     contentDescription = null,

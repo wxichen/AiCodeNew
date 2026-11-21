@@ -180,6 +180,7 @@ internal fun ChatInputBar(
     canUploadImages: Boolean,
     onUploadFile: () -> Unit,
     onUploadImage: () -> Unit,
+    onUploadVideo: () -> Unit,
     onTakePhoto: () -> Unit,
     slashCommands: List<SlashCommand> = emptyList(),
     fileMentionState: FileMentionState = FileMentionState.Idle,
@@ -691,6 +692,10 @@ internal fun ChatInputBar(
             onUploadImage = {
                 showAttachmentSheet = false
                 onUploadImage()
+            },
+            onUploadVideo = {
+                showAttachmentSheet = false
+                onUploadVideo()
             },
             onTakePhoto = {
                 showAttachmentSheet = false

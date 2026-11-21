@@ -407,6 +407,9 @@ dependencies {
     // Android WebKit 扩展（提供现代深色模式 WebSettingsCompat / ForceDark 支持）
     implementation("androidx.webkit:webkit:1.18.0")
 
+    // Media3：聊天消息内嵌视频播放（仅播放，不含 UI 模块——外观由 Compose 自绘统一控制）
+    implementation("androidx.media3:media3-exoplayer:1.11.1")
+
     // Shizuku：以 adb shell（uid 2000）身份执行命令。api 提供 Shizuku 类与 UserService 绑定，
     // provider 注册 ShizukuProvider（见 AndroidManifest）以跨进程获取 binder。
     implementation("dev.rikka.shizuku:api:13.1.5")

@@ -73,6 +73,9 @@ import com.aicode.core.theme.Spacing
 import com.aicode.core.util.LineDiff
 import com.aicode.feature.editor.data.EditorSettings
 import com.aicode.feature.editor.domain.TextMateSetup
+import com.aicode.feature.agent.presentation.component.HtmlPreviewHost
+import com.aicode.feature.agent.presentation.component.HtmlPreviewRequest
+import com.aicode.feature.agent.presentation.component.rememberHtmlPreviewState
 import com.aicode.feature.editor.presentation.component.MarkdownPreviewWebView
 import com.aicode.feature.plugin.domain.PluginUiEntry
 import com.aicode.feature.plugin.presentation.PluginEntryContext
@@ -144,6 +147,10 @@ fun CodeEditorScreen(
     val isMarkdown = remember(path) {
         path.substringAfterLast('.', "").lowercase() in setOf("md", "markdown")
     }
+    val isHtml = remember(path) {
+        path.substringAfterLast('.', "").lowercase() in setOf("html", "htm")
+    }
+    val htmlPreviewState = rememberHtmlPreviewState()
     var editorBackground by remember { mutableStateOf<Color?>(null) }
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val saving by viewModel.saving.collectAsStateWithLifecycle()
@@ -311,6 +318,21 @@ fun CodeEditorScreen(
                                         if (previewMode) R.string.editor_md_show_source
                                         else R.string.editor_md_preview
                                     )
+                                )
+                            }
+                        }
+                        // HTML：直接渲染整页，覆盖编辑器（源码保留在组合中，关掉预览即回到编辑态）。
+                        if (isHtml && editable) {
+                            IconButton(
+                                onClick = {
+                                    htmlPreviewState.show(
+                                        HtmlPreviewRequest(containerPath = path, fileName = path.substringAfterLast('/'))
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    FeatherIcons.Eye,
+                                    contentDescription = stringResource(R.string.editor_html_preview)
                                 )
                             }
                         }
@@ -516,6 +538,8 @@ fun CodeEditorScreen(
     if (showSettings) {
         EditorSettingsScreen(onBack = { showSettings = false })
     }
+    // HTML 预览：Dialog 是独立 window，挂在这里就能盖满整屏（含平板右栏场景）。
+    HtmlPreviewHost(state = htmlPreviewState, fileAccess = viewModel.htmlPreviewFileAccess)
     }
 }
 

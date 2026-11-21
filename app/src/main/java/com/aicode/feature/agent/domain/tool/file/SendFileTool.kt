@@ -164,7 +164,16 @@ class SendFileTool @Inject constructor(
             "bmp" -> "image/bmp"
             "pdf" -> "application/pdf"
             "zip" -> "application/zip"
-            "txt", "md", "kt", "java", "js", "ts", "json", "xml", "html", "css", "py", "sh", "gradle", "kts" -> "text/plain"
+            // 视频/网页要保留真实类型：聊天区据此决定内嵌播放还是给「预览」入口，
+            // 一律降成 text/plain 会让生成的网页既不能渲染、也不能在编辑器里按 HTML 打开。
+            "mp4" -> "video/mp4"
+            "webm" -> "video/webm"
+            "mkv" -> "video/x-matroska"
+            "mov" -> "video/quicktime"
+            "m4v" -> "video/x-m4v"
+            "3gp" -> "video/3gpp"
+            "html", "htm" -> "text/html"
+            "txt", "md", "kt", "java", "js", "ts", "json", "xml", "css", "py", "sh", "gradle", "kts" -> "text/plain"
             "apk" -> "application/vnd.android.package-archive"
             else -> null
         }
