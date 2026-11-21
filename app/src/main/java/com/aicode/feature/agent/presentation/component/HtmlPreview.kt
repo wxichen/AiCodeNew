@@ -61,13 +61,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
-import compose.icons.feathericons.ChevronDown
-import compose.icons.feathericons.ChevronUp
 import compose.icons.feathericons.Maximize
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.input.pointer.pointerInteropFilter
 
 /** 一次 HTML 预览请求。只带渲染所需的最小信息，不持有文件内容。 */
 @Immutable
@@ -113,11 +107,16 @@ class HtmlPreviewState : HtmlPreview {
 fun rememberHtmlPreviewState(): HtmlPreviewState = remember { HtmlPreviewState() }
 
 /**
- * 会话内直接渲染的网页预览：消息里 `.html` 附件下方直接展开一个 WebView，而不是点按钮再跳全屏。
+ * 会话内的网页预览：只显示**首屏**，点一下进全屏看整页。
  *
- * 高度固定 [INLINE_PREVIEW_HEIGHT] 并可折叠：聊天是纵向列表，页面高度不定，
- * 让它把整页铺开会把后续消息挤到很远，固定视口 + 可展开更符合浏览消息流。
- * 顶栏保留「展开」按钮可切到全屏，页面内部滚动交给 WebView 自己处理。
+ * 曾经的「在会话里滚动整页」走不通：Compose 的 LazyColumn 判定竖向手势发生在 PointerInput 层，
+ * 不经过原生 View 的 requestDisallowInterceptTouchEvent，所以既没法让 WebView 内部滚动抢到手势，
+ * 也没法可靠地量出内容高度（scrollHeight 在 onPageFinished 时常常还没稳定）。
+ *
+ * 现在的取舍是把问题绕开：
+ * - 会话里固定 [INLINE_PREVIEW_HEIGHT] 高，只当「缩略图」看首屏，不参与任何手势竞争；
+ * - 整块区域可点，点击直接进全屏 Dialog —— 那里没有列表，WebView 滚动天然正常；
+ * - 页面禁用滚动与触摸，避免用户在里面滑动却毫无反应（看起来像卡死）。
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -128,22 +127,11 @@ internal fun InlineHtmlPreview(
     viewModel: HtmlPreviewViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    var expanded by remember { mutableStateOf(false) }
-    // 命中缓存时页面已经画好了，不该再闪一次加载指示。
-    // 用 has 而不是 take：组合阶段不能产生 LRU 副作用。
     var loading by remember { mutableStateOf(!InlineHtmlPreviewCache.has(request.containerPath)) }
-    /**
-     * 页面内容高度（dp）。0 表示还没测出来，此时用默认视口高度。
-     *
-     * 会话里要能直接上下滑动看整页：把 WebView 设成内容实际高度，滚动就交给外层消息列表，
-     * 手感与读长消息一致；只有内容超过 [INLINE_PREVIEW_MAX_HEIGHT] 时才在 WebView 内部滚动。
-     */
-    var contentHeightDp by remember(request.containerPath) { mutableStateOf(0) }
     val fullscreen = LocalHtmlPreview.current
 
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val bgColor = if (dark) BG_DARK else BG_LIGHT
-    val density = LocalDensity.current
 
     // 工作区外的文件没有同源目录，退化为 data: 内联；与全屏预览保持同一套规则。
     val inlined = !request.containerPath.startsWith(HtmlPreviewViewModel.WORKSPACE_ROOT_PREFIX)
@@ -161,55 +149,40 @@ internal fun InlineHtmlPreview(
         else -> viewModel.urlFor(request.containerPath)
     }
 
-    // 缓存键按容器路径：同一文件的多条消息共享一个实例即可，内容以文件为准。
     val cacheKey = request.containerPath
 
-    // 命中缓存时直接复用（连同已渲染的 DOM 与 JS 状态），避免每次滚回来都重跑页面。
     val webView = remember(cacheKey) {
-        val cached = InlineHtmlPreviewCache.take(cacheKey)
-        cached ?: WebView(ContextThemeWrapper(context, webViewThemeRes(dark))).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.useWideViewPort = true
-            settings.loadWithOverviewMode = true
-            settings.builtInZoomControls = true
-            settings.displayZoomControls = false
-            // 只经虚拟域名读工作区文件：放开 file:// 会绕过同源策略。
-            settings.allowFileAccess = false
-            settings.allowContentAccess = false
-            webViewClient = object : WebViewClient() {
-                override fun shouldInterceptRequest(
-                    view: WebView,
-                    request: WebResourceRequest
-                ): WebResourceResponse? = viewModel.assetLoader.shouldInterceptRequest(request.url)
+        InlineHtmlPreviewCache.take(cacheKey)
+            ?: WebView(ContextThemeWrapper(context, webViewThemeRes(dark))).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                // 首屏预览不参与滚动：禁掉缩放手势，避免「滑了没反应」的错觉。
+                settings.builtInZoomControls = false
+                settings.displayZoomControls = false
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                setBackgroundColor(bgColor)
+                webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): WebResourceResponse? = viewModel.assetLoader.shouldInterceptRequest(request.url)
 
-                override fun onPageFinished(view: WebView, finishedUrl: String?) {
-                    loading = false
-                    finishedUrl?.let { InlineHtmlPreviewCache.markLoaded(cacheKey, it) }
-                    measureContentHeightPx(view) { px ->
-                        contentHeightDp = with(density) { px.toDp() }.value.toInt()
+                    override fun onPageFinished(view: WebView, finishedUrl: String?) {
+                        loading = false
+                        finishedUrl?.let { InlineHtmlPreviewCache.markLoaded(cacheKey, it) }
                     }
-                }
 
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    val target = request.url
-                    if (viewModel.containerPathForUrl(target) != null) return false
-                    if (target.scheme == "http" || target.scheme == "https") {
-                        runCatching {
-                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, target))
-                        }
-                        return true
-                    }
-                    return false
+                    // 预览里点链接一律不跳：整块区域是「点开全屏」按钮，不该被页面导航抢走。
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
                 }
             }
-        }
     }
 
-    // 复用的实例先入缓存再无主（首次创建时 put 也会登记），后续 take 才能命中。
     LaunchedEffect(webView) { InlineHtmlPreviewCache.put(cacheKey, webView) }
 
-    // 离开组合时不销毁：脱离父容器后由缓存统一管理，滚回来还能拿到同一份已渲染内容。
     DisposableEffect(webView) {
         onDispose { InlineHtmlPreviewCache.release(webView) }
     }
@@ -218,7 +191,6 @@ internal fun InlineHtmlPreview(
 
     LaunchedEffect(webView, url) {
         val target = url ?: return@LaunchedEffect
-        // 已完整加载过同一 URL 就不重载，直接沿用缓存里的页面。
         if (InlineHtmlPreviewCache.isLoaded(cacheKey, target)) {
             loading = false
             return@LaunchedEffect
@@ -227,6 +199,7 @@ internal fun InlineHtmlPreview(
         webView.loadUrl(target)
     }
 
+    // 首屏尺寸：宽按容器、高固定。预览不滚动，内容超出部分由全屏查看。
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -248,62 +221,35 @@ internal fun InlineHtmlPreview(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            // 折叠 / 展开视口：长页面在消息流里始终保留一个可用的小窗。
-            Icon(
-                if (expanded) FeatherIcons.ChevronUp else FeatherIcons.ChevronDown,
-                contentDescription = stringResource(
-                    if (expanded) R.string.chat_html_preview_collapse else R.string.chat_html_preview_expand
-                ),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(18.dp)
-                    .clickable { expanded = !expanded }
+            Text(
+                text = stringResource(R.string.chat_html_preview_tap_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Icon(
                 FeatherIcons.Maximize,
-                contentDescription = stringResource(R.string.chat_video_fullscreen),
+                contentDescription = stringResource(R.string.chat_html_preview_open_full),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(18.dp)
-                    .clickable { fullscreen.show(request) }
+                modifier = Modifier.size(18.dp)
             )
         }
-        // 高度策略（关键取舍）：
-        //
-        // 把 WebView 的高度直接设成页面内容高度，整个页面就「长在」消息流里，
-        // 上下滑动由外层列表完成——这是唯一能在会话里顺畅滚完整页的做法。
-        // 反过来，给 WebView 固定视口再让它内部滚动是不行的：Compose 的 LazyColumn
-        // 判定竖向手势时不看 ViewParent 拦截链，内部滚动的 WebView 永远抢不到手势，
-        // 表现就是「只能滑会话、网页不动」。
-        //
-        // 代价是超长页面会把消息顶得很远，用折叠上限兜底：未展开最多
-        // INLINE_PREVIEW_MAX_HEIGHT（此时页面可滚），展开后按内容全展开。
-        val measured = if (contentHeightDp > 0) contentHeightDp.dp else INLINE_PREVIEW_HEIGHT
-        val viewportHeight = if (expanded) {
-            measured
-        } else {
-            minOf(measured, INLINE_PREVIEW_MAX_HEIGHT)
-        }
-        // 只在「内容被折叠上限裁掉」时才需要把触摸交给 WebView 内部滚动。
-        val scrollable = measured > viewportHeight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(viewportHeight)
+                .height(INLINE_PREVIEW_HEIGHT)
                 .background(Color(bgColor))
+                // 整块可点：进全屏才能滚动查看整页。
+                .clickable { fullscreen.show(request) }
         ) {
             AndroidView(
                 factory = { webView },
-                modifier = Modifier
-                    .fillMaxSize()
-                    // 折叠态且内容超限时：DOWN 阶段就请求父容器别拦，尽量让 WebView 自己滚。
-                    // 展开后高度等于内容高度，不需要这段，整块交给外层列表。
-                    .then(if (scrollable) Modifier.pointerInteropFilter { event ->
-                        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
-                            webView.requestDisallowInterceptTouchEvent(true)
-                        }
-                        false
-                    } else Modifier)
+                modifier = Modifier.fillMaxSize(),
+                // 预览层不接收触摸，所有手势交给外层 clickable：
+                // 否则手指落在 WebView 上会试着滚动页面，却又滚不动。
+                update = { view ->
+                    view.isEnabled = false
+                    view.setOnTouchListener { _, _ -> true }
+                }
             )
             if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -311,21 +257,6 @@ internal fun InlineHtmlPreview(
                 }
             }
         }
-    }
-}
-
-/**
- * 用 JS 量页面实际高度（px）并回调给 Compose，供其决定 WebView 占多高。
- *
- * 取 documentElement 与 body 的 scrollHeight 较大者：`body` 在有绝对定位元素或
- * margin 折叠时可能比实际内容矮，只量它会把页面底部裁掉。
- */
-private fun measureContentHeightPx(view: WebView, onHeight: (Float) -> Unit) {
-    val js = "(function(){return Math.max(" +
-        "document.documentElement?document.documentElement.scrollHeight:0," +
-        "document.body?document.body.scrollHeight:0);})();"
-    view.evaluateJavascript(js) { raw ->
-        raw?.trim()?.trim('"')?.toFloatOrNull()?.takeIf { it > 0f }?.let(onHeight)
     }
 }
 
@@ -503,14 +434,8 @@ private fun HtmlPreviewDialogContent(
 private fun webViewThemeRes(dark: Boolean): Int =
     if (dark) R.style.Theme_AICode_WebView_Dark else R.style.Theme_AICode_WebView
 
-/** 内容高度还没测出来时的占位高度。 */
-private val INLINE_PREVIEW_HEIGHT = 220.dp
-
-/** 未展开时的内容高度上限：超过就在 WebView 内滚动，避免一条消息占满整屏。 */
-private val INLINE_PREVIEW_MAX_HEIGHT = 420.dp
-
-/** 展开后的高度上限：再高就该用全屏了。 */
-private val INLINE_PREVIEW_EXPANDED_HEIGHT = 720.dp
+/** 会话内首屏预览的固定高度：只当缩略图，整页请点开全屏看。 */
+private val INLINE_PREVIEW_HEIGHT = 240.dp
 
 private const val BG_DARK = 0xFF0D1117.toInt()
 private const val BG_LIGHT = 0xFFFFFFFF.toInt()
