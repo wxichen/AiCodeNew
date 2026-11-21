@@ -238,14 +238,11 @@ internal fun InlineHtmlPreview(
                 .fillMaxWidth()
                 .height(INLINE_PREVIEW_HEIGHT)
                 .background(Color(bgColor))
-                // 整块可点：进全屏才能滚动查看整页。
-                .clickable { fullscreen.show(request) }
         ) {
             AndroidView(
                 factory = { webView },
                 modifier = Modifier.fillMaxSize(),
-                // 预览层不接收触摸，所有手势交给外层 clickable：
-                // 否则手指落在 WebView 上会试着滚动页面，却又滚不动。
+                // WebView 不接收任何触摸：预览只是「图片」，交互交给上层透明点击层。
                 update = { view ->
                     view.isEnabled = false
                     view.setOnTouchListener { _, _ -> true }
@@ -256,6 +253,14 @@ internal fun InlineHtmlPreview(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
             }
+            // 透明点击层盖在 WebView 之上：
+            // AndroidView 的原生 View 会吃掉触摸，靠外层 Box 的 clickable 收不到，
+            // 必须用上层元素接管这个手势。
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable { fullscreen.show(request) }
+            )
         }
     }
 }
