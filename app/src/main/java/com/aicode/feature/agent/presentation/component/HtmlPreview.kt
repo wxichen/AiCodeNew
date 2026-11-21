@@ -175,8 +175,18 @@ internal fun InlineHtmlPreview(
                         finishedUrl?.let { InlineHtmlPreviewCache.markLoaded(cacheKey, it) }
                     }
 
-                    // 预览里点链接一律不跳：整块区域是「点开全屏」按钮，不该被页面导航抢走。
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
+                    // 与全屏预览同一套规则：工作区内链接就地导航，站外链接交给系统浏览器。
+                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                        val target = request.url
+                        if (viewModel.containerPathForUrl(target) != null) return false
+                        if (target.scheme == "http" || target.scheme == "https") {
+                            runCatching {
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, target))
+                            }
+                            return true
+                        }
+                        return false
+                    }
                 }
             }
     }
@@ -230,37 +240,28 @@ internal fun InlineHtmlPreview(
                 FeatherIcons.Maximize,
                 contentDescription = stringResource(R.string.chat_html_preview_open_full),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
+                // 先 padding 撑出 28dp 的触摸区，再 clickable：反过来会把图标缩掉。
+                modifier = Modifier
+                    .padding(5.dp)
+                    .size(18.dp)
+                    .clickable { fullscreen.show(request) }
             )
         }
+        // 画面区不做点击接管：WebView 正常接收触摸（与最初能用的版本一致），
+        // 进全屏走顶栏那个 Maximize 图标。之前试过 isEnabled=false + 透明点击层，
+        // 反而把整条触摸链打断了，点了没反应。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(INLINE_PREVIEW_HEIGHT)
                 .background(Color(bgColor))
         ) {
-            AndroidView(
-                factory = { webView },
-                modifier = Modifier.fillMaxSize(),
-                // WebView 不接收任何触摸：预览只是「图片」，交互交给上层透明点击层。
-                update = { view ->
-                    view.isEnabled = false
-                    view.setOnTouchListener { _, _ -> true }
-                }
-            )
+            AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
             if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                 }
             }
-            // 透明点击层盖在 WebView 之上：
-            // AndroidView 的原生 View 会吃掉触摸，靠外层 Box 的 clickable 收不到，
-            // 必须用上层元素接管这个手势。
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable { fullscreen.show(request) }
-            )
         }
     }
 }
