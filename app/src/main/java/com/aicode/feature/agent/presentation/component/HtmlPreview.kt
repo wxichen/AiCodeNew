@@ -67,6 +67,7 @@ import compose.icons.feathericons.Maximize
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 
 /** 一次 HTML 预览请求。只带渲染所需的最小信息，不持有文件内容。 */
 @Immutable
@@ -267,12 +268,24 @@ internal fun InlineHtmlPreview(
                     .clickable { fullscreen.show(request) }
             )
         }
-        // 高度按页面实际内容走：内容多高就占多高，滚动交给外层消息列表，手感与读长消息一致。
-        // 只有内容超过上限时才在 WebView 内部滚动（此时才需要拦父容器的手势）。
+        // 高度策略（关键取舍）：
+        //
+        // 把 WebView 的高度直接设成页面内容高度，整个页面就「长在」消息流里，
+        // 上下滑动由外层列表完成——这是唯一能在会话里顺畅滚完整页的做法。
+        // 反过来，给 WebView 固定视口再让它内部滚动是不行的：Compose 的 LazyColumn
+        // 判定竖向手势时不看 ViewParent 拦截链，内部滚动的 WebView 永远抢不到手势，
+        // 表现就是「只能滑会话、网页不动」。
+        //
+        // 代价是超长页面会把消息顶得很远，用折叠上限兜底：未展开最多
+        // INLINE_PREVIEW_MAX_HEIGHT（此时页面可滚），展开后按内容全展开。
         val measured = if (contentHeightDp > 0) contentHeightDp.dp else INLINE_PREVIEW_HEIGHT
-        val cap = if (expanded) INLINE_PREVIEW_EXPANDED_HEIGHT else INLINE_PREVIEW_MAX_HEIGHT
-        val locked = measured > cap
-        val viewportHeight = if (locked) cap else measured
+        val viewportHeight = if (expanded) {
+            measured
+        } else {
+            minOf(measured, INLINE_PREVIEW_MAX_HEIGHT)
+        }
+        // 只在「内容被折叠上限裁掉」时才需要把触摸交给 WebView 内部滚动。
+        val scrollable = measured > viewportHeight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -283,26 +296,14 @@ internal fun InlineHtmlPreview(
                 factory = { webView },
                 modifier = Modifier
                     .fillMaxSize()
-                    // 内容没超出上限时完全交给外层列表滚动；
-                    // 超出时把触摸交给 WebView，否则手指一滑就是列表在动，页面翻不动。
-                    .then(
-                        if (locked) {
-                            Modifier.pointerInput(webView) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        val event = awaitPointerEvent()
-                                        if (event.type == PointerEventType.Move ||
-                                            event.type == PointerEventType.Press
-                                        ) {
-                                            webView.requestDisallowInterceptTouchEvent(true)
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            Modifier
+                    // 折叠态且内容超限时：DOWN 阶段就请求父容器别拦，尽量让 WebView 自己滚。
+                    // 展开后高度等于内容高度，不需要这段，整块交给外层列表。
+                    .then(if (scrollable) Modifier.pointerInteropFilter { event ->
+                        if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                            webView.requestDisallowInterceptTouchEvent(true)
                         }
-                    )
+                        false
+                    } else Modifier)
             )
             if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
