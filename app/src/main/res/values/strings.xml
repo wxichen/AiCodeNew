@@ -567,6 +567,7 @@
     <string name="chat_html_preview">预览</string>
     <string name="chat_html_preview_close">关闭预览</string>
     <string name="chat_video_play">播放</string>
+    <string name="chat_video_replay">重新播放</string>
     <string name="chat_video_pause">暂停</string>
     <string name="chat_video_unavailable">视频文件已不可用，点击用其它应用打开</string>
     <string name="chat_video_play_failed">视频无法播放</string>
