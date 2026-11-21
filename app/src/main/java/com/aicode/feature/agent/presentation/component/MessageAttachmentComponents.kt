@@ -8,11 +8,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +50,7 @@ import com.aicode.core.ui.AttachmentKind
 import com.aicode.core.ui.LocalImageViewer
 import com.aicode.core.ui.ThumbnailCache
 import com.aicode.core.ui.attachmentKindOf
+import com.aicode.core.ui.decodeSampledBitmap
 import com.aicode.core.util.ApkInstaller
 import com.aicode.feature.agent.presentation.AgentAttachment
 import com.aicode.feature.workspace.domain.FileAccessProvider
@@ -63,6 +67,12 @@ private val AttachmentThumbSize = 44.dp
 
 /** 图片墙体感：单张时按原比例铺满气泡宽度，上限 260dp 高，太长的长截图也不至于占满整屏。 */
 private val ImageMaxHeight = 260.dp
+
+/** 消息内图片解码的像素上限：与 Markdown 正文同档，再大在手机屏上看不出差别。 */
+private const val IMAGE_DECODE_MAX_EDGE = 1024
+
+/** 占位阶段容器尺寸未知时的兜底下限，避免退化成缩略图档位。 */
+private const val IMAGE_DECODE_MIN_EDGE = 480
 
 /**
  * 已发送 / 已生成附件的列表。
@@ -120,10 +130,9 @@ private fun MessageImageGrid(images: List<AgentAttachment>) {
     if (images.size == 1) {
         MessageImageTile(
             attachment = images.first(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = ImageMaxHeight),
-            contentScale = ContentScale.Fit
+            modifier = Modifier.fillMaxWidth(),
+            contentScale = ContentScale.Fit,
+            singleImage = true
         )
         return
     }
@@ -137,7 +146,8 @@ private fun MessageImageGrid(images: List<AgentAttachment>) {
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f),
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        singleImage = false
                     )
                 }
                 // 补齐占位，避免奇数张时最后一张被拉成整行宽
@@ -147,42 +157,72 @@ private fun MessageImageGrid(images: List<AgentAttachment>) {
     }
 }
 
-/** 单张图片：异步解码原图、按容器宽度自适应，点击进全屏查看器。 */
+/**
+ * 单张图片：按容器宽度解码、原比例铺开，点击进全屏查看器。
+ *
+ * 解码档位必须跟实际显示尺寸挂钩：这里以前复用了 [ThumbnailCache] 的 180px 缩略图，
+ * 图被放大到整个气泡宽度后就发虚（小图尤其明显——原图才 1000px 宽，却被缩到 180 再放大）。
+ * 现在按容器宽度 × 屏幕密度算出需要的像素宽，并按长宽比推出长边，再解码。
+ */
 @Composable
 private fun MessageImageTile(
     attachment: AgentAttachment,
     modifier: Modifier,
-    contentScale: ContentScale
+    contentScale: ContentScale,
+    /** 单图需要按原比例展示（限高），多图是固定方格裁切。 */
+    singleImage: Boolean
 ) {
     val viewer = LocalImageViewer.current
     val label = stringResource(R.string.chat_attachment_preview, attachment.fileName)
-    val bitmap by produceState<ImageBitmap?>(initialValue = ThumbnailCache.peek(attachment.localPath), attachment.localPath) {
-        value = ThumbnailCache.peek(attachment.localPath)
-            ?: withContext(Dispatchers.IO) { ThumbnailCache.load(attachment.localPath) }
-    }
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(Radius.md))
-            .background(chatMutedSurfaceColor())
-            .clickable(onClickLabel = label) { viewer.show(attachment.toViewerRequest()) },
-        contentAlignment = Alignment.Center
+    BoxWithConstraints(
+        modifier = if (singleImage) modifier.heightIn(max = ImageMaxHeight) else modifier
     ) {
-        val image = bitmap
-        if (image != null) {
-            ComposeImage(
-                bitmap = image,
-                contentDescription = label,
-                contentScale = contentScale,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Icon(
-                FeatherIcons.Image,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
+        val density = LocalDensity.current
+        // 容器像素宽，封顶到与 Markdown 正文同档：再大在手机屏上也看不出差别，反而费内存。
+        val widthPx = with(density) { maxWidth.toPx() }.toInt().coerceAtMost(IMAGE_DECODE_MAX_EDGE)
+        val maxEdge = widthPx.coerceAtLeast(IMAGE_DECODE_MIN_EDGE)
+        val bitmap by produceState<ImageBitmap?>(initialValue = null, attachment.localPath, maxEdge) {
+            value = withContext(Dispatchers.IO) { decodeSampledBitmap(attachment.localPath, maxEdge) }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (singleImage) Modifier else Modifier.fillMaxHeight())
+                .clip(RoundedCornerShape(Radius.md))
+                .background(chatMutedSurfaceColor())
+                .clickable(onClickLabel = label) { viewer.show(attachment.toViewerRequest()) },
+            contentAlignment = Alignment.Center
+        ) {
+            val image = bitmap
+            if (image != null) {
+                if (singleImage) {
+                    // 单图按位图自身比例排布（限高由外层 heightIn 生效），
+                    // 用 fillMaxSize 会把它拉满限高，矮图被纵向拉伸。
+                    ComposeImage(
+                        bitmap = image,
+                        contentDescription = label,
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    ComposeImage(
+                        bitmap = image,
+                        contentDescription = label,
+                        contentScale = contentScale,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            } else {
+                Box(modifier = Modifier.height(160.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        FeatherIcons.Image,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
         }
     }
 }

@@ -19,8 +19,8 @@ import com.aicode.core.util.FileLogger
  */
 private const val TAG = "ImageDecode"
 
-/** 缩略图档位：聊天附件预览卡只有 76dp，采样到 180 已有余量。 */
-const val THUMBNAIL_MAX_EDGE = 180
+/** 缩略图档位：输入栏待发送预览卡 76dp、文件行缩略图 44dp，按高密度屏约 3x 计也不至发虚。 */
+const val THUMBNAIL_MAX_EDGE = 380
 
 /** Markdown 正文内嵌图片档位：显示高度上限 320dp。 */
 const val MARKDOWN_MAX_EDGE = 1024
