@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -292,67 +291,75 @@ internal fun VideoAttachmentPlayer(
 
             // 控制条：画面下方独立一行，宽度跟画面一致。
             if (player != null && !failed) {
-                Row(
+                // 宽度取「画面宽」与「控制条最小可用宽」中较大者：
+                // 竖屏视频画面只有约 200dp，控制条若跟着画面收窄，进度条照样被挤到几乎看不见。
+                val controlWidth = maxOf(videoBoxWidth, MIN_CONTROL_WIDTH)
+                    .coerceAtMost(availWidthDp)
+                Column(
                     modifier = Modifier
-                        .width(videoBoxWidth)
+                        .width(controlWidth)
                         .clip(RoundedCornerShape(bottomStart = Radius.md, bottomEnd = Radius.md))
                         .background(Color.Black)
-                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
                 ) {
-                    Icon(
-                        when {
-                            playing -> FeatherIcons.Pause
-                            ended -> FeatherIcons.RotateCcw
-                            else -> FeatherIcons.Play
-                        },
-                        contentDescription = stringResource(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    ) {
+                        Icon(
                             when {
-                                playing -> R.string.chat_video_pause
-                                ended -> R.string.chat_video_replay
-                                else -> R.string.chat_video_play
-                            }
-                        ),
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clickable { togglePlayback() }
-                    )
-                    // 进度条可点按跳转：否则长视频只能从头看。
-                    var barWidth by remember { mutableStateOf(0) }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(24.dp)
-                            .pointerInput(player) {
-                                detectTapGestures { offset ->
-                                    if (barWidth <= 0) return@detectTapGestures
-                                    val target = (offset.x / barWidth).coerceIn(0f, 1f)
-                                    player?.let { p ->
-                                        if (p.duration > 0) p.seekTo((p.duration * target).toLong())
+                                playing -> FeatherIcons.Pause
+                                ended -> FeatherIcons.RotateCcw
+                                else -> FeatherIcons.Play
+                            },
+                            contentDescription = stringResource(
+                                when {
+                                    playing -> R.string.chat_video_pause
+                                    ended -> R.string.chat_video_replay
+                                    else -> R.string.chat_video_play
+                                }
+                            ),
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clickable { togglePlayback() }
+                        )
+                        // 进度条可点按跳转：否则长视频只能从头看。
+                        var barWidth by remember { mutableStateOf(0) }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(24.dp)
+                                .pointerInput(player) {
+                                    detectTapGestures { offset ->
+                                        if (barWidth <= 0) return@detectTapGestures
+                                        val target = (offset.x / barWidth).coerceIn(0f, 1f)
+                                        player?.let { p ->
+                                            if (p.duration > 0) p.seekTo((p.duration * target).toLong())
+                                        }
                                     }
                                 }
-                            }
-                            .onSizeChanged { barWidth = it.width },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(Radius.pill)),
-                            color = Color.White,
-                            trackColor = Color.White.copy(alpha = 0.28f)
-                        )
+                                .onSizeChanged { barWidth = it.width },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(Radius.pill)),
+                                color = Color.White,
+                                trackColor = Color.White.copy(alpha = 0.28f)
+                            )
+                        }
                     }
+                    // 文件名单独一行：塞进上面那行会继续挤占进度条，长文件名尤其明显。
                     Text(
                         text = fileName,
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = FILE_NAME_MAX_WIDTH)
+                        modifier = Modifier.padding(top = Spacing.xs)
                     )
                 }
             }
@@ -366,7 +373,7 @@ private const val DEFAULT_RATIO = 16f / 9f
 /** 视频高度上限：竖屏视频靠它压住，避免把气泡拉成一屏多高。 */
 private val VIDEO_MAX_HEIGHT = 300.dp
 
-/** 控制条里文件名的最大宽度：给进度条留出足够空间。 */
-private val FILE_NAME_MAX_WIDTH = 120.dp
+/** 控制条的最小可用宽度：竖屏视频画面很窄，控制条不能跟着一起窄下去。 */
+private val MIN_CONTROL_WIDTH = 260.dp
 
 private const val TAG = "VideoPlayer"
