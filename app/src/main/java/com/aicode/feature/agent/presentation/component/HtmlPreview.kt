@@ -65,6 +65,9 @@ import compose.icons.feathericons.Maximize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.layout.heightIn
 
 
 /** 一次 HTML 预览请求。只带渲染所需的最小信息，不持有文件内容。 */
@@ -201,9 +204,15 @@ internal fun InlineHtmlPreview(
                     override fun onPageFinished(view: WebView, finishedUrl: String?) {
                         loading = false
                         finishedUrl?.let { InlineHtmlPreviewCache.markLoaded(cacheKey, it) }
-                        // 页面刚加载完时布局可能还没稳定，连量两次：第一次常拿到首屏高度。
-                        measurePageHeight(view) { contentHeightPx = it }
-                        view.postDelayed({ measurePageHeight(view) { contentHeightPx = it } }, 250)
+                        // 页面刚 finished 时布局往往还没稳定，scrollHeight 会先给一个偏小的值。
+                        // 连续量几次取最大值，避免「只滑一点点」这种高度被低估的情况。
+                        repeat(6) { index ->
+                            view.postDelayed({
+                                measurePageHeight(view) { px ->
+                                    if (px > contentHeightPx) contentHeightPx = px
+                                }
+                            }, (index + 1) * 150L)
+                        }
                     }
 
                     // 与全屏预览同一套规则：工作区内链接就地导航，站外链接交给系统浏览器。
@@ -294,14 +303,17 @@ internal fun InlineHtmlPreview(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(INLINE_PREVIEW_HEIGHT)
                 .background(Color(bgColor))
         ) {
+            // 与工具输出卡片（ToolSection）完全同构：
+            // 外层不设固定高度，改用 heightIn(max=) 限高 + verticalScroll。
+            // 之前我先给外层固定 240dp、再让内层 fillMaxSize，等于套了两层视口，
+            // 结果内层可滚距离被压到极小，剩余手势全溢给外层列表 —— 就是「一起动」。
             Column(
-                // 只用默认的 verticalScroll：它与外层 LazyColumn 的标准 nested scroll
-                // 协商（内层先滚、到边界后把剩余量交给列表）本来就能工作。
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .heightIn(max = INLINE_PREVIEW_HEIGHT)
+                    .nestedScroll(rememberBoundNestedScrollConnection(scrollState))
                     .verticalScroll(scrollState)
             ) {
                 AndroidView(
