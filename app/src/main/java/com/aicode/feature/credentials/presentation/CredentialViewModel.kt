@@ -191,22 +191,43 @@ class CredentialViewModel @Inject constructor(
         }
     }
 
-    /** 用户切换开关：持久化 + 立即注入/撤销。 */
+    /**
+     * 用户切换开关：持久化 + 立即注入/撤销。
+     *
+     * 拿不到服务器标识（远程配置尚未就绪 / 已回到本地模式）时不写盘、只刷新一次 UI，
+     * 让开关回到真实状态，而不是停在被点过的样子。
+     */
     fun setAutoInject(enabled: Boolean) {
+        val key = currentServerKey()
+        if (key == null) {
+            refreshAutoInjectState()
+            return
+        }
+        // 先落盘再上传：上传要走 SSH，慢且可能失败，界面上开关应立刻反映用户意图。
+        injectSettings.setAutoInject(key, enabled)
+        _extra.update { it.copy(autoInjectEnabled = enabled) }
         viewModelScope.launch {
-            val key = currentServerKey() ?: return@launch
-            injectSettings.setAutoInject(key, enabled)
             applyInjection(key, enabled)
             refreshAutoInjectState()
         }
     }
 
-    /** 首次询问弹窗选择后调用：标记已询问 + 应用选择。 */
+    /**
+     * 首次询问弹窗选择后调用：标记已询问 + 应用选择。
+     *
+     * 弹窗必须无论如何都能关掉：拿不到服务器标识时也要清掉 [showAutoInjectPrompt]，
+     * 否则用户会看到一个点不动的对话框（早期版本就是在这里直接 return 导致的）。
+     */
     fun dismissAutoInjectPrompt(enabled: Boolean) {
+        val key = currentServerKey()
+        if (key == null) {
+            _extra.update { it.copy(showAutoInjectPrompt = false) }
+            return
+        }
+        injectSettings.markAsked(key)
+        injectSettings.setAutoInject(key, enabled)
+        _extra.update { it.copy(showAutoInjectPrompt = false, autoInjectEnabled = enabled) }
         viewModelScope.launch {
-            val key = currentServerKey() ?: return@launch
-            injectSettings.markAsked(key)
-            injectSettings.setAutoInject(key, enabled)
             applyInjection(key, enabled)
             refreshAutoInjectState()
         }

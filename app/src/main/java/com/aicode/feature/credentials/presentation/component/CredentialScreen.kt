@@ -85,7 +85,13 @@ fun CredentialScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     // 每次进入重新读署名：用户可能在终端改过项目级/全局署名，避免回显陈旧空值。
-    LaunchedEffect(Unit) { viewModel.refreshIdentity() }
+    // 进入页面时刷新自动注入开关与「首次询问」状态：
+    // ViewModel 的 init 里调时远程配置可能还没就绪，那时算出来的 isRemote / showAutoInjectPrompt
+    // 都是 false，不在这里补一次的话，开关会一直显示错误状态、首次询问弹窗的按钮也无效。
+    LaunchedEffect(Unit) {
+        viewModel.refreshIdentity()
+        viewModel.refreshAutoInjectState()
+    }
 
     // toast → Snackbar 一次性消费。
     LaunchedEffect(state.toast) {

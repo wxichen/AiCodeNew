@@ -28,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -96,6 +97,11 @@ internal fun VideoAttachmentPlayer(
     var ended by remember { mutableStateOf(false) }
     /** 全屏播放时进入独立 Dialog；播放器实例复用，画面切换 SurfaceView 宿主即可。 */
     var fullscreen by remember { mutableStateOf(false) }
+    /**
+     * Surface 归属版本号：每次退出全屏自增，让小窗的 VideoSurface 重新接管播放器。
+     * 只靠「Dialog 关闭」本身不会触发小窗重组，所以需要一个显式的 key。
+     */
+    var surfaceOwnerKey by remember { mutableIntStateOf(0) }
     // 0 表示还没拿到：此时按 16:9 占位，拿到后立即按真实比例重排。
     var videoWidth by remember(localPath) { mutableStateOf(0) }
     var videoHeight by remember(localPath) { mutableStateOf(0) }
@@ -235,7 +241,7 @@ internal fun VideoAttachmentPlayer(
                 .background(Color.Black)
                 .clickable { if (!failed) togglePlayback() }
         ) {
-            VideoSurface(player = player, onViewReady = { videoView = it })
+            VideoSurface(player = player, surfaceOwnerKey = surfaceOwnerKey, onViewReady = { videoView = it })
 
             VideoOverlayContent(
                 playing = playing,
@@ -264,19 +270,68 @@ internal fun VideoAttachmentPlayer(
             videoHeight = videoHeight,
             onTogglePlayback = ::togglePlayback,
             onSeek = ::seekToFraction,
-            onDismiss = { fullscreen = false },
+            onDismiss = {
+                // 顺序很重要：Dialog 还持有 Surface 时先解绑，再让位给底部小窗；
+                // 只关 Dialog 而不解绑的话，播放器会继续握着一张即将销毁的 Surface。
+                player?.clearVideoSurface()
+                fullscreen = false
+                // key 变化驱动小窗 VideoSurface 重新接管（并在绑定后补一次定位出帧）。
+                surfaceOwnerKey += 1
+            },
             onViewReady = { videoView = it }
         )
     }
 }
 
-/** 画面本体：SurfaceView 承载解码输出。 */
+/**
+ * 画面本体：SurfaceView 承载解码输出。
+ *
+ * 绑定放在 [LaunchedEffect] 而不是只写在 factory 里：全屏 Dialog 关闭后小窗的
+ * AndroidView 不会重建（factory 不再执行），必须靠 [surfaceOwnerKey] 变化重新把播放器
+ * 指回这张 Surface，否则播放器仍握着一张已销毁的全屏 Surface，表现就是「退出全屏后画面卡死」。
+ */
 @Composable
 private fun VideoSurface(
     player: ExoPlayer?,
+    surfaceOwnerKey: Int,
     onViewReady: (android.view.SurfaceView?) -> Unit
 ) {
     if (player == null) return
+    val context = LocalContext.current
+    val view = remember(context) {
+        android.view.SurfaceView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        }
+    }
+    AndroidView(factory = { view }, modifier = Modifier.fillMaxSize())
+    // key 变化（退出全屏）时重新接管：播放器必须被指回这张 Surface，
+    // 否则它仍握着一张已销毁的全屏 Surface，画面就停住不动。
+    LaunchedEffect(player, surfaceOwnerKey) {
+        player.setVideoSurfaceView(view)
+        onViewReady(view)
+        // 重绑后补一次定位：暂停态不会自动出帧，不这么做新 Surface 要等下一次播放才有画面。
+        if (!player.isPlaying) player.seekTo(player.currentPosition)
+    }
+}
+
+/**
+ * 全屏里的画面本体。
+ *
+ * 退出全屏（Dialog 销毁）时必须把播放器的 Surface 交回小窗：否则播放器继续握着一张
+ * 已销毁的 Surface，小窗画面就停住不动。这里在 dispose 时调用 [onReady] 传 null，
+ * 由调用方把接管权交回小窗的 VideoSurface。
+ */
+@Composable
+private fun FullscreenSurface(
+    player: ExoPlayer?,
+    onReady: (android.view.SurfaceView?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (player == null) return
+    val holder = remember { mutableStateOf<android.view.SurfaceView?>(null) }
     AndroidView(
         factory = { ctx ->
             android.view.SurfaceView(ctx).apply {
@@ -284,13 +339,19 @@ private fun VideoSurface(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                player.setVideoSurfaceView(this)
-                onViewReady(this)
+                holder.value = this
             }
         },
-        onRelease = { onViewReady(null) },
-        modifier = Modifier.fillMaxSize()
+        onRelease = { holder.value = null },
+        modifier = modifier
     )
+    val view = holder.value
+    LaunchedEffect(player, view) {
+        if (view != null && player != null) {
+            player.setVideoSurfaceView(view)
+            onReady(view)
+        }
+    }
 }
 
 /**
@@ -359,23 +420,22 @@ private fun BoxScope.VideoOverlayContent(
     }
 
     if (showFullscreenButton) {
-        Surface(
-            shape = CircleShape,
-            color = Color.Black.copy(alpha = 0.5f),
+        // 只要图标：圆形底 + Surface 的投影在深色画面上会显出多余的圆环与阴影。
+        // 用 Box 而不是 Surface，避免 Material 默认托起 elevation。
+        Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(Spacing.xs)
-                .size(32.dp)
-                .clickable { onEnterFullscreen() }
+                .padding(Spacing.sm)
+                .size(24.dp)
+                .clickable { onEnterFullscreen() },
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    FeatherIcons.Maximize,
-                    contentDescription = stringResource(R.string.chat_video_fullscreen),
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+            Icon(
+                FeatherIcons.Maximize,
+                contentDescription = stringResource(R.string.chat_video_fullscreen),
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 
@@ -459,18 +519,9 @@ private fun VideoFullscreenDialog(
                     fitHeight = maxHeight
                     fitWidth = maxHeight * ratio
                 }
-                AndroidView(
-                    factory = { ctx ->
-                        android.view.SurfaceView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            player?.setVideoSurfaceView(this)
-                            onViewReady(this)
-                        }
-                    },
-                    onRelease = { onViewReady(null) },
+                FullscreenSurface(
+                    player = player,
+                    onReady = onViewReady,
                     modifier = Modifier
                         .width(fitWidth)
                         .height(fitHeight)
