@@ -32,6 +32,7 @@
 - 产物：`app/build/outputs/apk/<flavor>/release/app-<flavor>-release.apk`、`.../bundle/<flavor>/release/app-<flavor>-release.aab`。
 - flavor 按 ABI 拆分：`universal`（arm64-v8a + x86_64）、`armsolo`（仅 arm64-v8a）、`x86solo`（仅 x86_64）。
 - release 签名凭据读 `app/keystore.properties`（`storeFile` / `storePassword` / `keyAlias` / `keyPassword`）；本地通常不存放签名文件，CI 从 GitHub secret 还原到 `app/aicode.jks`。
+- **16KB 页大小对齐**：`libtermux.so` 是 Termux 的预编译产物（仓库无 C 源码），四个 ABI 都已用 `scripts/fix-native-align.py` 把 PT_LOAD 段的 `p_align` 改到 16KB；否则 Android 15+ 开启 16KB 内存页的设备上本地 PRoot 终端会 dlopen 失败。校验脚本 `scripts/check-native-align.py` 已挂到 native 库合并任务，也可单独 `./gradlew :app:checkNativeAlign` 或 `python3 scripts/check-native-align.py`。
 - **`targetSdk` 锁定 28**（`minSdk = 26`）：升级前必须先解决两件事——外部工作区目前用 File API 直读 `/storage/emulated/0`（29+ 需改走 `MANAGE_EXTERNAL_STORAGE`），以及 `TerminalKeepaliveService` 的 `dataSync` 前台服务在 35+ 有 6 小时/24 小时累计上限（需换 `specialUse`）。PRoot 已改由 jniLibs 装到 `nativeLibraryDir`，W^X 不再挡容器启动。代价是不能上 Google Play。
 
 ## 架构地图

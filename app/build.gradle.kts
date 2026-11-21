@@ -443,3 +443,14 @@ tasks.register<Exec>("checkMigrations") {
 
 // assets 合并前必须先生成文档，否则首次构建（或 clean 后）APK 里会没有 docs/。
 tasks.named("preBuild") { dependsOn(syncAiDocs) }
+
+// 16KB 页大小对齐：Android 15+ 启用 16KB 内存页的设备上，PT_LOAD 段对齐小于 16KB 的 .so
+// 会被 dlopen 拒绝。libtermux.so 是 Termux 的预编译产物（仓库无 C 源码），需保证对齐不被回退。
+tasks.register<Exec>("checkNativeAlign") {
+    commandLine("python3", "scripts/check-native-align.py")
+    workingDir(rootProject.projectDir)
+}
+// 只在打包 native 库前校验：用任务名而不是内部任务类型，避免依赖 AGP 内部 API。
+tasks.matching { it.name.startsWith("merge") && it.name.contains("NativeLibs") }.configureEach {
+    dependsOn("checkNativeAlign")
+}
