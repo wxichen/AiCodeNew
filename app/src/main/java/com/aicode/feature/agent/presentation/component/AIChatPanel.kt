@@ -42,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
@@ -94,6 +95,7 @@ import com.aicode.feature.agent.presentation.hasVisibleContent
 import com.aicode.feature.agent.presentation.component.HtmlPreviewHost
 import com.aicode.feature.agent.presentation.component.LocalHtmlPreview
 import com.aicode.feature.agent.presentation.component.LocalFileAccess
+import com.aicode.feature.agent.presentation.component.InlineHtmlPreviewCache
 import com.aicode.feature.agent.presentation.component.rememberHtmlPreviewState
 import com.aicode.feature.onboarding.domain.OnboardingStep
 import com.aicode.feature.onboarding.presentation.onboardingTarget
@@ -2061,6 +2063,20 @@ fun AIChatPanel(
         ImageViewerHost(state = imageViewerState, load = chatImageLoad)
         // HTML 预览同属独立 Dialog：放同一层级，才能盖住整个屏而不是只盖聊天列。
         HtmlPreviewHost(state = htmlPreviewState, fileAccess = viewModel.fileAccess)
+        InlinePreviewCacheLifecycle()
+    }
+}
+
+/**
+ * 内联网页预览的 WebView 缓存在聊天页卸载时统一回收。
+ *
+ * 不在这里清的话，缓存的 WebView 会一直持有 Activity Context；而且下次打开聊天页
+ * 拿到的还是上次的实例，页面上残留的 JS 定时器会继续跑。
+ */
+@Composable
+private fun InlinePreviewCacheLifecycle() {
+    DisposableEffect(Unit) {
+        onDispose { InlineHtmlPreviewCache.clear() }
     }
 }
 
