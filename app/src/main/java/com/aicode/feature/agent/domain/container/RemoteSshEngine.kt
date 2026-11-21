@@ -261,9 +261,12 @@ class RemoteSshEngine @Inject constructor(
      */
     private fun gitCredentialEnvPrefix(): String {
         val wsRoot = connection.gitCredentialWorkspaceRoot?.trimEnd('/') ?: return ""
+        // 用注入时实际写入的路径（含按客户端隔离的子目录），不能用固定的
+        // ~/.aicode/gitconfig.credential：两个共存客户端会指向同一份文件、互相覆盖。
+        val configPath = connection.credentialConfigPath ?: return ""
         val key = shellQuote("includeIf.gitdir:$wsRoot/.path")
         return "export GIT_CONFIG_COUNT=1; " +
             "export GIT_CONFIG_KEY_0=$key; " +
-            "export GIT_CONFIG_VALUE_0=\"\${HOME}/.aicode/gitconfig.credential\"; "
+            "export GIT_CONFIG_VALUE_0=${shellQuote(configPath)}; "
     }
 }

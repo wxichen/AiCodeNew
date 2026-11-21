@@ -110,6 +110,14 @@ class RemoteSshConnection @Inject constructor(
     var gitCredentialWorkspaceRoot: String? = null
         private set
 
+    /**
+     * 本次注入实际写入的 gitconfig 片段路径（含客户端隔离目录）。
+     * 命令执行时用它拼 includeIf，不能用固定路径——那会让两个共存客户端互相覆盖。
+     */
+    @Volatile
+    var credentialConfigPath: String? = null
+        private set
+
     suspend fun connect(config: RemoteConnectionConfig) = mutex.withLock {
         if (isConnected() && this.config == config) return@withLock
         disconnectInternal()
@@ -163,6 +171,7 @@ class RemoteSshConnection @Inject constructor(
         sshClient = null
         remoteHome = null
         gitCredentialWorkspaceRoot = null
+        credentialConfigPath = null
         _connectionState.value = ConnectionState.DISCONNECTED
     }
 
@@ -633,10 +642,25 @@ class RemoteSshConnection @Inject constructor(
         val client = sshClient ?: return@withLock
         val home = remoteHome ?: return@withLock
         val aicodeDir = home.trimEnd('/') + "/.aicode"
+        // 按客户端包名分目录：AiCode 与 AiCodeNew 可以连同一台服务器，
+        // 共用一份 gitconfig.credential 会互相覆盖，关掉其中一个还会把另一边的文件删掉。
+        val credDir = "$aicodeDir/${containerInstaller.remoteClientDirName}"
         val wsRoot = workspaceRoot.trimEnd('/').ifEmpty { return@withLock }
         withContext(Dispatchers.IO) {
             runCatching {
-                sftpOperationMutex.withLock { sftp().mkdirs(aicodeDir) }
+                sftpOperationMutex.withLock { sftp().mkdirs(credDir) }
+                // 清掉旧版的共享文件：它们曾是所有客户端共用的路径，现在由各自的目录接管。
+                // 不清理的话，服务器上会留一份谁都不再维护的凭据副本。
+                sftpOperationMutex.withLock {
+                    val sftp = sftp()
+                    LEGACY_SHARED_FILES.forEach { name ->
+                        val legacy = "$aicodeDir/$name"
+                        if (sftp.statExistence(legacy) != null) {
+                            runCatching { sftp.rm(legacy) }
+                                .onFailure { FileLogger.w(TAG, "清理旧共享凭据文件失败: $legacy", it) }
+                        }
+                    }
+                }
 
                 val creds = credentials.joinToString("\n") { c ->
                     "https://${enc(c.username)}:${enc(c.token)}@${c.host}"
@@ -652,16 +676,17 @@ class RemoteSshConnection @Inject constructor(
                     "#!/bin/sh\n",
                     "#!/bin/sh\nexport AICODE_CRED_NO_PROMPT=1\n"
                 )
-                writeRemoteFile("$aicodeDir/git-credential-aicode", remoteHelperScript.toByteArray(Charsets.UTF_8), executable = true)
-                writeRemoteFile("$aicodeDir/git-credentials", encodeCreds(creds).toByteArray(Charsets.UTF_8))
+                writeRemoteFile("$credDir/git-credential-aicode", remoteHelperScript.toByteArray(Charsets.UTF_8), executable = true)
+                writeRemoteFile("$credDir/git-credentials", encodeCreds(creds).toByteArray(Charsets.UTF_8))
 
                 val credentialConfig = buildString {
                     append("[credential]\n")
-                    append("    helper = !AICODE_CRED_NO_PROMPT=1 $aicodeDir/git-credential-aicode\n")
+                    append("    helper = !AICODE_CRED_NO_PROMPT=1 $credDir/git-credential-aicode\n")
                 }
-                writeRemoteFile("$aicodeDir/gitconfig.credential", credentialConfig.toByteArray(Charsets.UTF_8))
+                writeRemoteFile("$credDir/gitconfig.credential", credentialConfig.toByteArray(Charsets.UTF_8))
+                credentialConfigPath = "$credDir/gitconfig.credential"
                 gitCredentialWorkspaceRoot = wsRoot
-                FileLogger.i(TAG, "已注入 git 凭据到远程 $aicodeDir（限定 $wsRoot/）")
+                FileLogger.i(TAG, "已注入 git 凭据到远程 $credDir（限定 $wsRoot/）")
             }.onFailure { FileLogger.w(TAG, "注入 git 凭据到远程失败", it) }
         }
     }
@@ -674,17 +699,19 @@ class RemoteSshConnection @Inject constructor(
     suspend fun removeGitCredentialConfig() = credentialSyncMutex.withLock {
         val client = sshClient ?: return@withLock
         val home = remoteHome ?: return@withLock
-        val aicodeDir = home.trimEnd('/') + "/.aicode"
+        val credDir = home.trimEnd('/') + "/.aicode/" + containerInstaller.remoteClientDirName
         withContext(Dispatchers.IO) {
             runCatching {
                 sftpOperationMutex.withLock {
                     val sftp = sftp()
+                    // 只删本客户端目录下的文件：另一台客户端的注入有自己的目录，关掉这台不该影响它。
                     listOf("gitconfig.credential", "git-credentials", "git-credential-aicode").forEach { name ->
-                        val path = "$aicodeDir/$name"
+                        val path = "$credDir/$name"
                         if (sftp.statExistence(path) != null) sftp.rm(path)
                     }
                 }
                 gitCredentialWorkspaceRoot = null
+                credentialConfigPath = null
                 FileLogger.i(TAG, "已撤销远程 git 凭据注入")
             }.onFailure { FileLogger.w(TAG, "撤销远程 git 凭据注入失败", it) }
         }
@@ -720,6 +747,14 @@ class RemoteSshConnection @Inject constructor(
     }
 
     private fun enc(part: String): String = java.net.URLEncoder.encode(part, "UTF-8")
+
+    private companion object {
+        /**
+         * 旧版写在 `~/.aicode/` 根下的共享凭据文件。
+         * 引入按客户端隔离目录后，这些文件由各自的 `clients/<包名>/` 取代。
+         */
+        val LEGACY_SHARED_FILES = listOf("gitconfig.credential", "git-credentials", "git-credential-aicode")
+    }
 
     /** 与 app 侧一致的编码：base64 后整体反转（属混淆，非加密）。 */
     private fun encodeCreds(plain: String): String =

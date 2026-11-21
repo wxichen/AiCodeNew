@@ -287,6 +287,16 @@ class ContainerInstaller @Inject constructor(
     val aicodeDir: File
         get() = File(context.filesDir, "aicode")
 
+    /**
+     * 远程服务器上按客户端隔离的目录名（形如 `clients/com.aicodenew`）。
+     *
+     * AiCode 与 AiCodeNew 可以同时连同一台服务器：git 凭据注入原先都写
+     * `~/.aicode/gitconfig.credential` 等固定文件，会互相覆盖，关掉其中一个的自动注入
+     * 还会把另一边的文件删掉。用包名分目录后互不干扰。
+     */
+    val remoteClientDirName: String
+        get() = "clients/" + context.packageName
+
     /** 把 [aicodeDir] 下的宿主文件映射为容器内路径；`.aicode` 绑定到 `/root/.aicode`。 */
     fun containerPathFor(file: File): String {
         val root = aicodeDir.canonicalFile
