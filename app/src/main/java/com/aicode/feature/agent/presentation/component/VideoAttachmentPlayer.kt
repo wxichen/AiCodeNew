@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -69,8 +72,11 @@ import kotlinx.coroutines.delay
  * 只用 Media3 的 ExoPlayer 承载解码与播放，控制条由 Compose 自绘——引入 media3-ui 会带进
  * 一整套 View 体系与主题样式，在扁平化聊天气泡里既不好看也不好改。
  *
- * **画面比例取视频真实尺寸**（`Player.Listener.onVideoSizeChanged`），不写死 16:9：
- * 竖屏手机视频、超宽屏视频、方图都会被拉伸变形。拿到尺寸前先用 16:9 占位。
+ * 版式是「画面在上、控制条在下」。控制条不叠在画面内部：竖屏视频算下来只有两百多 dp 宽，
+ * 播放键 + 进度条 + 文件名挤在同一行会把进度条压成几乎看不见。
+ *
+ * 画面比例取视频真实尺寸（`Player.Listener.onVideoSizeChanged`），不写死 16:9：
+ * 竖屏、超宽屏、方图都不会被拉伸变形。拿到尺寸前先用 16:9 占位。
  *
  * 播放器实例跟随组合生命周期：消息滚出视口即释放，避免列表里堆 N 个解码实例。
  * [localPath] 为空时（远程模式临时文件已失效）只显示占位与提示。
@@ -197,101 +203,100 @@ internal fun VideoAttachmentPlayer(
         if (videoWidth > 0 && videoHeight > 0) videoWidth.toFloat() / videoHeight else DEFAULT_RATIO
     }
 
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        // 用可用宽度与比例算出画面尺寸：竖屏按高度上限反推宽度，宽屏按宽度铺满。
+    BoxWithConstraints(modifier = modifier) {
+        // 画面宽高：竖屏按高度上限反推宽度，宽屏按可用宽度铺满。
         // 只显式定 width/height，避免 widthIn + heightIn + aspectRatio 互相约束把画面挤变形。
         val density = LocalDensity.current
         val availWidthDp = maxWidth
         val maxHeightDp = with(density) { VIDEO_MAX_HEIGHT.toPx().toDp() }
-        val boxWidth: androidx.compose.ui.unit.Dp
-        val boxHeight: androidx.compose.ui.unit.Dp
+        val videoBoxWidth: Dp
+        val videoBoxHeight: Dp
         if (ratio >= 1f) {
-            boxWidth = availWidthDp
-            boxHeight = availWidthDp / ratio
+            videoBoxWidth = availWidthDp
+            videoBoxHeight = availWidthDp / ratio
         } else {
             val widthByHeight = maxHeightDp * ratio
-            boxWidth = if (widthByHeight <= availWidthDp) widthByHeight else availWidthDp
-            boxHeight = boxWidth / ratio
+            videoBoxWidth = if (widthByHeight <= availWidthDp) widthByHeight else availWidthDp
+            videoBoxHeight = videoBoxWidth / ratio
         }
 
-        Box(
-            modifier = Modifier
-                .width(boxWidth)
-                .height(boxHeight)
-                .clip(RoundedCornerShape(Radius.md))
-                .background(Color.Black)
-                .clickable { if (!failed) togglePlayback() },
-            contentAlignment = Alignment.Center
-        ) {
-            if (player != null) {
-                AndroidView(
-                    factory = { ctx ->
-                        android.view.SurfaceView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
+        Column {
+            Box(
+                modifier = Modifier
+                    .width(videoBoxWidth)
+                    .height(videoBoxHeight)
+                    .clip(RoundedCornerShape(topStart = Radius.md, topEnd = Radius.md))
+                    .background(Color.Black)
+                    .clickable { if (!failed) togglePlayback() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (player != null) {
+                    AndroidView(
+                        factory = { ctx ->
+                            android.view.SurfaceView(ctx).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                player.setVideoSurfaceView(this)
+                                videoView = this
+                            }
+                        },
+                        onRelease = { videoView = null },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                if (player == null || failed) {
+                    Text(
+                        text = stringResource(
+                            if (player == null) R.string.chat_video_unavailable else R.string.chat_video_play_failed
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.86f),
+                        modifier = Modifier.padding(Spacing.md)
+                    )
+                }
+
+                if (buffering && player != null && !failed) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                }
+
+                if (player != null && !playing && !failed) {
+                    // 暂停态给一个明确的按钮：点画面任意处也能播，但按钮更符合直觉。
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.55f),
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clickable { togglePlayback() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            // 播完后同一个按钮改成重播语义，图标跟着换。
+                            Icon(
+                                if (ended) FeatherIcons.RotateCcw else FeatherIcons.Play,
+                                contentDescription = stringResource(
+                                    if (ended) R.string.chat_video_replay else R.string.chat_video_play
+                                ),
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp)
                             )
-                            player.setVideoSurfaceView(this)
-                            videoView = this
                         }
-                    },
-                    onRelease = { videoView = null },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            if (player == null || failed) {
-                Text(
-                    text = stringResource(
-                        if (player == null) R.string.chat_video_unavailable else R.string.chat_video_play_failed
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.86f),
-                    modifier = Modifier.padding(Spacing.md)
-                )
-            }
-
-            if (buffering && player != null && !failed) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(32.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-            }
-
-            if (player != null && !playing && !failed) {
-                // 暂停态给一个明确的按钮：点画面任意处也能播，但按钮更符合直觉。
-                Surface(
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.55f),
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clickable { togglePlayback() }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        // 播完后同一个按钮改成重播语义，图标跟着换。
-                        Icon(
-                            if (ended) FeatherIcons.RotateCcw else FeatherIcons.Play,
-                            contentDescription = stringResource(
-                                if (ended) R.string.chat_video_replay else R.string.chat_video_play
-                            ),
-                            tint = Color.White,
-                            modifier = Modifier.size(26.dp)
-                        )
                     }
                 }
             }
 
-            // 底部控制条：播放/暂停 + 进度 + 文件名。聊天里主要是「确认内容」，不做全功能播放器。
+            // 控制条：画面下方独立一行，宽度跟画面一致。
             if (player != null && !failed) {
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.45f))
+                        .width(videoBoxWidth)
+                        .clip(RoundedCornerShape(bottomStart = Radius.md, bottomEnd = Radius.md))
+                        .background(Color.Black)
                         .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
@@ -344,10 +349,10 @@ internal fun VideoAttachmentPlayer(
                     Text(
                         text = fileName,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(start = Spacing.xs)
+                        modifier = Modifier.widthIn(max = FILE_NAME_MAX_WIDTH)
                     )
                 }
             }
@@ -360,5 +365,8 @@ private const val DEFAULT_RATIO = 16f / 9f
 
 /** 视频高度上限：竖屏视频靠它压住，避免把气泡拉成一屏多高。 */
 private val VIDEO_MAX_HEIGHT = 300.dp
+
+/** 控制条里文件名的最大宽度：给进度条留出足够空间。 */
+private val FILE_NAME_MAX_WIDTH = 120.dp
 
 private const val TAG = "VideoPlayer"

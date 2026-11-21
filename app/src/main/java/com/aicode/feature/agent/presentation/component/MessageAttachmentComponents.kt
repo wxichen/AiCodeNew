@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
@@ -74,6 +75,9 @@ private const val IMAGE_DECODE_MAX_EDGE = 1024
 /** 占位阶段容器尺寸未知时的兜底下限，避免退化成缩略图档位。 */
 private const val IMAGE_DECODE_MIN_EDGE = 480
 
+/** 用户消息里单图的宽度上限：小图不该被拉满整行，与右侧气泡的观感保持一致。 */
+private val USER_SINGLE_IMAGE_MAX_WIDTH = 260.dp
+
 /**
  * 已发送 / 已生成附件的列表。
  *
@@ -83,18 +87,23 @@ private const val IMAGE_DECODE_MIN_EDGE = 480
  * - **HTML**：一行文件卡片 + 「预览」按钮，点了在应用内全屏渲染页面；
  * - **其余**：一行一个文件（图标 + 文件名 + 大小 · 容器路径），点击交给调用方。
  *
+ * [fromUser] 决定较窄的媒体（竖屏视频、多图方格）往哪边靠：用户消息在右、助手消息在左，
+ * 与气泡本身的方向一致。文件行始终占满宽度，不受影响。
+ *
  * 点击语义：图片一律走内置全屏查看器（隐式依赖组合树上层提供 [LocalImageViewer]，聊天区都满足）；
  * 非图片用调用方给的 [onClick] —— 工具卡片传的是「系统 app 打开」，助手气泡不传即不可点。
  */
 @Composable
 internal fun MessageAttachmentList(
     attachments: List<AgentAttachment>,
-    onClick: ((AgentAttachment) -> Unit)? = null
+    onClick: ((AgentAttachment) -> Unit)? = null,
+    fromUser: Boolean = false
 ) {
     if (attachments.isEmpty()) return
     val kinds = remember(attachments) {
         attachments.map { attachmentKindOf(it.fileName, it.mimeType, it.isImage) }
     }
+    val horizontalArrangement = if (fromUser) Arrangement.End else Arrangement.Start
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -103,12 +112,17 @@ internal fun MessageAttachmentList(
     ) {
         val images = attachments.filterIndexed { index, _ -> kinds[index] == AttachmentKind.IMAGE }
         if (images.isNotEmpty()) {
-            MessageImageGrid(images = images)
+            MessageImageGrid(images = images, fromUser = fromUser)
         }
         attachments.forEachIndexed { index, attachment ->
             when (kinds[index]) {
                 AttachmentKind.IMAGE -> Unit
-                AttachmentKind.VIDEO -> VideoAttachmentCard(attachment = attachment)
+                AttachmentKind.VIDEO -> Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = horizontalArrangement
+                ) {
+                    VideoAttachmentCard(attachment = attachment)
+                }
                 else -> MessageAttachmentRow(
                     attachment = attachment,
                     onClick = onClick,
@@ -120,23 +134,30 @@ internal fun MessageAttachmentList(
 }
 
 /**
- * 图片墙：一张时按原比例铺满可用宽度，多张时双列缩略图。
+ * 图片墙：一张时按原比例铺开，多张时双列缩略图。
  *
  * 单图高度上限 [ImageMaxHeight]：长截图（4000×300 这类）按原比例铺满会把气泡拉成一屏多，
  * 反而看不到上下文；限高后靠点击进全屏查看器看细节。
+ *
+ * [fromUser] 为真时，单图与多图墙都靠右（与用户气泡方向一致）。
  */
 @Composable
-private fun MessageImageGrid(images: List<AgentAttachment>) {
+private fun MessageImageGrid(images: List<AgentAttachment>, fromUser: Boolean) {
     if (images.size == 1) {
-        MessageImageTile(
-            attachment = images.first(),
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            contentScale = ContentScale.Fit,
-            singleImage = true
-        )
+            horizontalArrangement = if (fromUser) Arrangement.End else Arrangement.Start
+        ) {
+            MessageImageTile(
+                attachment = images.first(),
+                modifier = if (fromUser) Modifier.widthIn(max = USER_SINGLE_IMAGE_MAX_WIDTH) else Modifier.fillMaxWidth(),
+                contentScale = ContentScale.Fit,
+                singleImage = true
+            )
+        }
         return
     }
-    // 双列缩略图：按行分组，最后一行不足两个时左对齐（不拉伸占满）。
+    // 双列缩略图：按行分组，最后一行不足两个时用 Spacer 占位，保持与上方对齐。
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         images.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
