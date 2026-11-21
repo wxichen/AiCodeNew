@@ -12,6 +12,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg" alt="License GPL-3.0" /></a>
   <img src="https://img.shields.io/badge/Platform-Android-green.svg" alt="Android Platform" />
   <a href="https://github.com/jieapi/aicode/releases"><img src="https://img.shields.io/github/v/release/jieapi/aicode?display_name=tag&include_prereleases" alt="Latest Release" /></a>
+  <a href="https://ifdian.net/a/jieapi"><img src="https://img.shields.io/badge/Sponsor-Afdian-946ce6.svg" alt="Sponsor on Afdian" /></a>
 </p>
 
 <p align="center">
@@ -111,9 +112,9 @@ There is nothing to set up beforehand: install the app, configure a model under 
 | Changelog | [Releases](https://github.com/jieapi/aicode/releases) (all versions & notes) |
 | User guide | [Online docs](https://aicode.murk.top): quick start, user manual and advanced guides (same content as the in-app docs) |
 
-## Star
+## Support & Sponsor
 
-If AiCode New is helpful to you, give it a [Star](https://github.com/jieapi/aicode) — it helps more developers discover the project.
+If AiCode New is helpful to you, give it a [Star](https://github.com/jieapi/aicode) — it helps more developers discover the project. You can also support ongoing development on **[Afdian](https://ifdian.net/a/jieapi)**.
 
 ## Star History
 

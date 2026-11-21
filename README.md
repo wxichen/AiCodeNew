@@ -12,6 +12,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg" alt="License GPL-3.0" /></a>
   <img src="https://img.shields.io/badge/Platform-Android-green.svg" alt="Android Platform" />
   <a href="https://github.com/jieapi/aicode/releases"><img src="https://img.shields.io/github/v/release/jieapi/aicode?display_name=tag&include_prereleases" alt="Latest Release" /></a>
+  <a href="https://ifdian.net/a/jieapi"><img src="https://img.shields.io/badge/Sponsor-%E7%88%B1%E5%8F%91%E7%94%B5-946ce6.svg" alt="爱发电赞助" /></a>
 </p>
 
 <p align="center">
@@ -111,9 +112,9 @@ AiCode New 是运行在 Android 上的通用 AI Coding Agent，把一套完整�
 | 更新记录 | [Releases](https://github.com/jieapi/aicode/releases)（历史版本与更新说明） |
 | 使用指南 | [在线文档](https://aicode.murk.top)：快速上手、使用手册与进阶教程（与 App 内置文档同源） |
 
-## Star
+## 支持与赞助
 
-如果 AiCode New 对你有帮助，欢迎 [Star](https://github.com/jieapi/aicode) 支持，让更多开发者看到这个项目。
+如果 AiCode New 对你有帮助，欢迎 [Star](https://github.com/jieapi/aicode) 支持，让更多开发者看到这个项目；也可以通过 **[爱发电](https://ifdian.net/a/jieapi)** 赞助项目持续维护。
 
 ## Star History
 
