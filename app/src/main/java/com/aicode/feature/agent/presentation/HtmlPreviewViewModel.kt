@@ -42,7 +42,13 @@ class HtmlPreviewViewModel @Inject constructor(
         private const val TAG = "HtmlPreview"
     }
 
+    /**
+     * 必须显式 [WebViewAssetLoader.Builder.setDomain]：默认域名是
+     * `appassets.androidplatform.net`，若用别的域名拼 URL，拦截器根本不会命中，
+     * 请求会当成真实网址去解析 DNS，报 ERR_NAME_NOT_RESOLVED。
+     */
     val assetLoader: WebViewAssetLoader = WebViewAssetLoader.Builder()
+        .setDomain(HOST)
         .addPathHandler(WORKSPACE_MOUNT, WorkspacePathHandler())
         .build()
 

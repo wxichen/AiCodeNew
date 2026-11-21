@@ -36,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -54,6 +56,14 @@ import compose.icons.FeatherIcons
 import compose.icons.feathericons.X
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
+import compose.icons.feathericons.ChevronDown
+import compose.icons.feathericons.ChevronUp
+import compose.icons.feathericons.Maximize
 
 /** 一次 HTML 预览请求。只带渲染所需的最小信息，不持有文件内容。 */
 @Immutable
@@ -61,6 +71,12 @@ data class HtmlPreviewRequest(
     val containerPath: String,
     val fileName: String
 )
+
+/**
+ * 会话内预览需要按容器路径读同目录资源。附件行渲染在多层中间件里，
+ * 用 CompositionLocal 注入比一路加参数更省改动（与 LocalImageViewer 同一套路）。
+ */
+val LocalFileAccess = staticCompositionLocalOf<FileAccessProvider?> { null }
 
 /** 打开 HTML 预览的句柄：调用方只管 show。 */
 @Stable
@@ -91,6 +107,154 @@ class HtmlPreviewState : HtmlPreview {
 
 @Composable
 fun rememberHtmlPreviewState(): HtmlPreviewState = remember { HtmlPreviewState() }
+
+/**
+ * 会话内直接渲染的网页预览：消息里 `.html` 附件下方直接展开一个 WebView，而不是点按钮再跳全屏。
+ *
+ * 高度固定 [INLINE_PREVIEW_HEIGHT] 并可折叠：聊天是纵向列表，页面高度不定，
+ * 让它把整页铺开会把后续消息挤到很远，固定视口 + 可展开更符合浏览消息流。
+ * 顶栏保留「展开」按钮可切到全屏，页面内部滚动交给 WebView 自己处理。
+ */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+internal fun InlineHtmlPreview(
+    request: HtmlPreviewRequest,
+    fileAccess: FileAccessProvider,
+    modifier: Modifier = Modifier,
+    viewModel: HtmlPreviewViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    val fullscreen = LocalHtmlPreview.current
+
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val bgColor = if (dark) BG_DARK else BG_LIGHT
+
+    // 工作区外的文件没有同源目录，退化为 data: 内联；与全屏预览保持同一套规则。
+    val inlined = !request.containerPath.startsWith(HtmlPreviewViewModel.WORKSPACE_ROOT_PREFIX)
+    var html by remember(request.containerPath) { mutableStateOf<String?>(null) }
+    if (inlined && html == null) {
+        LaunchedEffect(request.containerPath) {
+            html = withContext(Dispatchers.IO) {
+                runCatching { fileAccess.readFile(request.containerPath) }.getOrNull()
+            }
+        }
+    }
+    val url = when {
+        inlined && html == null -> null
+        inlined -> viewModel.inlineUrl(html.orEmpty())
+        else -> viewModel.urlFor(request.containerPath)
+    }
+
+    val webView = remember {
+        WebView(ContextThemeWrapper(context, webViewThemeRes(dark))).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = true
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false
+            // 只经虚拟域名读工作区文件：放开 file:// 会绕过同源策略。
+            settings.allowFileAccess = false
+            settings.allowContentAccess = false
+            setBackgroundColor(bgColor)
+            webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView,
+                    request: WebResourceRequest
+                ): WebResourceResponse? = viewModel.assetLoader.shouldInterceptRequest(request.url)
+
+                override fun onPageFinished(view: WebView, url: String?) {
+                    loading = false
+                }
+
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    val target = request.url
+                    if (viewModel.containerPathForUrl(target) != null) return false
+                    if (target.scheme == "http" || target.scheme == "https") {
+                        runCatching {
+                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, target))
+                        }
+                        return true
+                    }
+                    return false
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(dark) { webView.setBackgroundColor(bgColor) }
+
+    DisposableEffect(webView) {
+        onDispose {
+            webView.stopLoading()
+            webView.destroy()
+        }
+    }
+
+    LaunchedEffect(url) {
+        val target = url ?: return@LaunchedEffect
+        loading = true
+        webView.loadUrl(target)
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Radius.md))
+            .background(chatMutedSurfaceColor())
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            Text(
+                text = request.fileName,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            // 折叠 / 展开视口：长页面在消息流里始终保留一个可用的小窗。
+            Icon(
+                if (expanded) FeatherIcons.ChevronUp else FeatherIcons.ChevronDown,
+                contentDescription = stringResource(
+                    if (expanded) R.string.chat_html_preview_collapse else R.string.chat_html_preview_expand
+                ),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { expanded = !expanded }
+            )
+            Icon(
+                FeatherIcons.Maximize,
+                contentDescription = stringResource(R.string.chat_video_fullscreen),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable { fullscreen.show(request) }
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (expanded) INLINE_PREVIEW_EXPANDED_HEIGHT else INLINE_PREVIEW_HEIGHT)
+                .background(Color(bgColor))
+        ) {
+            AndroidView(factory = { webView }, modifier = Modifier.fillMaxSize())
+            if (loading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+            }
+        }
+    }
+}
 
 /**
  * HTML 预览宿主：点击后以全屏 [Dialog] 打开 WebView 渲染页面。
@@ -265,6 +429,12 @@ private fun HtmlPreviewDialogContent(
 
 private fun webViewThemeRes(dark: Boolean): Int =
     if (dark) R.style.Theme_AICode_WebView_Dark else R.style.Theme_AICode_WebView
+
+/** 会话内预览的默认视口高度：够看首屏，又不至于把后续消息推得太远。 */
+private val INLINE_PREVIEW_HEIGHT = 220.dp
+
+/** 展开后的高度上限：再高就该用全屏了。 */
+private val INLINE_PREVIEW_EXPANDED_HEIGHT = 420.dp
 
 private const val BG_DARK = 0xFF0D1117.toInt()
 private const val BG_LIGHT = 0xFFFFFFFF.toInt()

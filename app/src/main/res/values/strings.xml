@@ -566,6 +566,8 @@
     <string name="chat_attachment_open">打开 %1$s</string>
     <string name="chat_html_preview">预览</string>
     <string name="chat_html_preview_close">关闭预览</string>
+    <string name="chat_html_preview_expand">展开网页</string>
+    <string name="chat_html_preview_collapse">收起网页</string>
     <string name="chat_video_play">播放</string>
     <string name="chat_video_replay">重新播放</string>
     <string name="chat_video_fullscreen">全屏播放</string>

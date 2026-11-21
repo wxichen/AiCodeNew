@@ -93,6 +93,7 @@ import com.aicode.feature.agent.presentation.StreamingAssistantMessage
 import com.aicode.feature.agent.presentation.hasVisibleContent
 import com.aicode.feature.agent.presentation.component.HtmlPreviewHost
 import com.aicode.feature.agent.presentation.component.LocalHtmlPreview
+import com.aicode.feature.agent.presentation.component.LocalFileAccess
 import com.aicode.feature.agent.presentation.component.rememberHtmlPreviewState
 import com.aicode.feature.onboarding.domain.OnboardingStep
 import com.aicode.feature.onboarding.presentation.onboardingTarget
@@ -1597,6 +1598,7 @@ fun AIChatPanel(
         LocalMarkdownImageTransformer provides markdownImageTransformer,
         LocalImageViewer provides imageViewerState,
         LocalHtmlPreview provides htmlPreviewState,
+        LocalFileAccess provides viewModel.fileAccess,
         LocalAttachmentOpener provides attachmentOpener,
         LocalSubAgentCardHost provides SubAgentCardHost(
             states = subAgentCards,

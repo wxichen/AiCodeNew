@@ -123,11 +123,24 @@ internal fun MessageAttachmentList(
                 ) {
                     VideoAttachmentCard(attachment = attachment)
                 }
-                else -> MessageAttachmentRow(
-                    attachment = attachment,
-                    onClick = onClick,
-                    previewable = kinds[index] == AttachmentKind.HTML
-                )
+                else -> {
+                    MessageAttachmentRow(
+                        attachment = attachment,
+                        onClick = onClick,
+                        previewable = kinds[index] == AttachmentKind.HTML
+                    )
+                    // 网页在会话里直接渲染，不必再点按钮跳到另一个界面。
+                    if (kinds[index] == AttachmentKind.HTML) {
+                        // 没注入文件访问后端时退回「点按进全屏」的旧行为，不留空白区域。
+                        LocalFileAccess.current?.let { access ->
+                            InlineHtmlPreview(
+                                request = HtmlPreviewRequest(attachment.containerPath, attachment.fileName),
+                                fileAccess = access,
+                                modifier = Modifier.padding(top = Spacing.xs)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
