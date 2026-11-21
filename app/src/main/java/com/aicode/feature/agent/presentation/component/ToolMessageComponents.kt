@@ -626,6 +626,7 @@ internal fun toolRunningLabelRes(toolName: String?): Int = when (toolName?.lower
     "editfile", "writefile" -> R.string.chat_status_editing_file
     "readfile", "list", "sendfile" -> R.string.chat_status_reading_file
     "viewimage" -> R.string.chat_status_viewing_image
+    "videoframes" -> R.string.chat_status_viewing_video
     "search", "websearch", "webfetch" -> R.string.chat_status_searching_web
     "browser" -> R.string.chat_status_browsing_web
     "bash", "terminal" -> R.string.chat_status_running_command

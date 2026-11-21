@@ -971,6 +971,7 @@
     <string name="chat_status_editing_file">正在编辑文件</string>
     <string name="chat_status_reading_file">正在读取文件</string>
     <string name="chat_status_viewing_image">正在查看图片</string>
+    <string name="chat_status_viewing_video">正在抽取视频画面</string>
     <string name="chat_status_searching_web">正在联网搜索</string>
     <string name="chat_status_browsing_web">正在操作浏览器</string>
     <string name="chat_status_asking_user">正在询问用户</string>

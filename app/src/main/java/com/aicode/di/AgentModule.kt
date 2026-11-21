@@ -31,6 +31,7 @@ import com.aicode.feature.agent.domain.container.SshLoginKeyStore
 import com.aicode.feature.agent.domain.tool.file.ReadFileTool
 import com.aicode.feature.agent.domain.tool.file.SendFileTool
 import com.aicode.feature.agent.domain.tool.file.GenerateImageTool
+import com.aicode.feature.agent.domain.tool.file.VideoFramesTool
 import com.aicode.feature.agent.domain.tool.file.ViewImageTool
 import com.aicode.feature.agent.domain.tool.file.WriteFileTool
 import com.aicode.feature.agent.domain.tool.editor.EditFileTool
@@ -361,6 +362,7 @@ object AgentModule {
         readFileTool: ReadFileTool,
         sendFileTool: SendFileTool,
         viewImageTool: ViewImageTool,
+        videoFramesTool: VideoFramesTool,
         writeFileTool: WriteFileTool,
         editFileTool: EditFileTool,
         generateImageTool: GenerateImageTool,
@@ -386,6 +388,7 @@ object AgentModule {
             register("readFile", readFileTool)
             register("sendFile", sendFileTool)
             register("viewImage", viewImageTool)
+            register("videoFrames", videoFramesTool)
             register("writeFile", writeFileTool)
             register("editFile", editFileTool)
             register("generateImage", generateImageTool)

@@ -153,7 +153,7 @@ data class AgentDefinition(
          * browser 归入写组：浏览器自动化（点击/填表）在 PLAN 下同样被拦截。
          * MCP 动态工具（`mcp__*`）性质未知，不归组——定义绑定 MCP 时以描述文本为准。
          */
-        private val READ_TOOLS = setOf("readFile", "list", "search", "viewImage")
+        private val READ_TOOLS = setOf("readFile", "list", "search", "viewImage", "videoFrames")
         private val WRITE_TOOLS = setOf("writeFile", "editFile", "generateImage", "browser")
         private val EXEC_TOOLS = setOf("Bash", "terminal", "Shizuku")
     }
